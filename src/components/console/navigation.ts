@@ -40,6 +40,7 @@ export const groups = [
       ["wa-overview", "Dashboard"],
       ["wa-onboarding", "Connect WhatsApp"],
       ["wa-health", "Account health"],
+      ["wa-provider-inbox", "Provider conversations"],
       ["wa-templates", "Templates & approval"],
       ["wa-broadcast", "Broadcasts"],
       ["catalog", "Catalog & payments"],

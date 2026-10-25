@@ -10,14 +10,19 @@ import {
   saveThreadReply,
 } from "@/lib/local-email";
 import TemplatePreview from "./template-preview";
+import ProviderInbox from "./provider-inbox";
+import type { AccountIdentity } from "@/lib/workspace-document";
 export default function Inbox({
   channel,
   notify,
+  account,
 }: {
   channel: Channel;
+  account?: AccountIdentity;
   notify: (s: string) => void;
 }) {
   const { state: s, update } = useWorkspace();
+  const [mode, setMode] = useState(account ? "account" : "draft");
   const [selected, setSelected] = useState(""),
     [query, setQuery] = useState(""),
     [mailbox, setMailbox] = useState("all"),
@@ -43,7 +48,7 @@ export default function Inbox({
     setStatus("all");
     setCompose(false);
   }, [channel]);
-  return (
+  const draftContent = (
     <Panel
       title={`${channel} inbox`}
       description="All replies here are local drafts or explicitly simulated incoming messages."
@@ -533,5 +538,26 @@ export default function Inbox({
         </Modal>
       )}
     </Panel>
+  );
+  return channel === "WhatsApp" && account ? (
+    <>
+      <div className="console-actions" aria-label="Inbox data source">
+        <button
+          className={mode === "account" ? "primary" : "secondary"}
+          onClick={() => setMode("account")}
+        >
+          Account inbox
+        </button>
+        <button
+          className={mode === "draft" ? "primary" : "secondary"}
+          onClick={() => setMode("draft")}
+        >
+          Draft preview
+        </button>
+      </div>
+      {mode === "account" ? <ProviderInbox account={account} /> : draftContent}
+    </>
+  ) : (
+    draftContent
   );
 }

@@ -41,6 +41,8 @@ import Settings from "./settings";
 import { Panel, Empty, Badge, date } from "./ui";
 import { groups, names } from "./navigation";
 import Operations from "./operations";
+import ProviderInbox from "./provider-inbox";
+import IntegrationReadiness from "./integration-readiness";
 import { AccountProvider } from "../local-provider";
 import type { AccountIdentity } from "@/lib/workspace-document";
 import { createBrowserClient } from "@supabase/ssr";
@@ -407,6 +409,7 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
   else if (page === "wa-inbox" || page === "email-inbox")
     content = (
       <Inbox
+        account={account}
         channel={page === "wa-inbox" ? "WhatsApp" : "Email"}
         notify={notify}
       />
@@ -503,57 +506,10 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         account={account}
       />
     );
+  else if (page === "wa-provider-inbox")
+    content = <ProviderInbox account={account} />;
   else if (page === "integrations")
-    content = (
-      <>
-        <Panel
-          title="Integrations & provider readiness"
-          description="No service credentials are collected in the sample workspace."
-        >
-          <div className="console-card-grid">
-            {[
-              [
-                "WhatsApp",
-                "Official Meta onboarding and provider events.",
-                "wa-overview",
-              ],
-              [
-                "Gmail & Zoho",
-                "OAuth sender accounts and mailbox synchronization.",
-                "senders",
-              ],
-              [
-                "Voice & calendar",
-                "Telephony, speech, transcripts and appointment routing.",
-                "voice-overview",
-              ],
-              [
-                "Lead sources",
-                "Meta lead ads, website forms, Sheets and webhook ingestion.",
-                "sources",
-              ],
-              [
-                "Payments",
-                "Versioned rates, credit purchases and reconciliation.",
-                "billing",
-              ],
-            ].map(([name, description, target]) => (
-              <article className="console-mini-card" key={name}>
-                <Badge>Not connected</Badge>
-                <h3>{name}</h3>
-                <p>{description}</p>
-                <button className="secondary" onClick={() => navigate(target)}>
-                  Review setup
-                </button>
-              </article>
-            ))}
-          </div>
-          <a className="text-button" href="/account">
-            Open authenticated account <ArrowUpRight size={16} />
-          </a>
-        </Panel>
-      </>
-    );
+    content = <IntegrationReadiness account={account} navigate={navigate} />;
   else {
     const kind = (
       {
@@ -779,8 +735,8 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
           )}
           {account && !canEdit && (
             <div className="console-error">
-              Read-only access. Owners and administrators can edit drafts after
-              authenticator verification in{" "}
+              Draft editors are read-only. Owners and administrators can edit
+              after authenticator verification in{" "}
               <a href="/account/manage">Account & security</a>.
             </div>
           )}

@@ -14,9 +14,21 @@ export function GET(request: Request) {
   return new Response("Verification failed", { status: 403 });
 }
 export async function POST(request: Request) {
-  const raw = await request.text();
-  if (raw.length > 1_000_000)
-    return new Response("Payload too large", { status: 413 });
+  const reader = request.body?.getReader();
+  if (!reader) return new Response("Missing payload", { status: 400 });
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > 1_000_000) {
+      await reader.cancel();
+      return new Response("Payload too large", { status: 413 });
+    }
+    chunks.push(value);
+  }
+  const raw = Buffer.concat(chunks).toString("utf8");
   const signature =
     request.headers.get("x-hub-signature-256")?.replace(/^sha256=/, "") || null;
   if (!verifyHmac(raw, signature, process.env.META_APP_SECRET))

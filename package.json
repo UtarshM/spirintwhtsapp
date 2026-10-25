@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "worker:meta-events": "node --env-file=.env.local --import tsx services/worker/run-meta-events.ts"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.900.0",

@@ -1,7 +1,13 @@
 """Run only against the disposable localhost QA database."""
 import subprocess
+import argparse
 from concurrent.futures import ThreadPoolExecutor
-BASE = ['psql', '-h', '127.0.0.1', '-p', '55439', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-At']
+parser = argparse.ArgumentParser()
+parser.add_argument('--host', default='127.0.0.1')
+parser.add_argument('--port', default='55439')
+parser.add_argument('--database', default='postgres')
+args = parser.parse_args()
+BASE = ['psql', '-h', args.host, '-p', args.port, '-d', args.database, '-v', 'ON_ERROR_STOP=1', '-At']
 def sql(text):
     return subprocess.run(BASE + ['-c', text], capture_output=True, text=True)
 w = '99999999-9999-4999-8999-999999999999'

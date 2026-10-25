@@ -292,13 +292,13 @@ export default function Operations({ page, navigate, notify, account }: Props) {
           ].map((label) => (
             <div key={label}>
               <strong>—</strong>
-              <small>{label} · Not connected</small>
+              <small>{label} · Not verified</small>
             </div>
           ))}
         </div>
         <p>
-          No business number is connected. Draft checklists cannot change
-          account health or badge status.
+          Account health has not been fetched from Meta. An authorization record
+          alone does not confirm health, eligibility or badge status.
         </p>
         <div className="console-actions">
           {action("wa-onboarding", "Prepare account connection")}
@@ -320,7 +320,7 @@ export default function Operations({ page, navigate, notify, account }: Props) {
           <div className="console-card-grid">
             {["Gmail", "Zoho"].map((provider) => (
               <article key={provider} className="console-mini-card">
-                <Badge>Not connected</Badge>
+                <Badge>Provider acceptance pending</Badge>
                 <h3>{provider}</h3>
                 <p>
                   Authorization, sender access, refresh/reconnection and
@@ -751,7 +751,7 @@ export default function Operations({ page, navigate, notify, account }: Props) {
           {["Sent", "Delivered", "Read / opened", "Failed"].map((label) => (
             <div key={label}>
               <strong>—</strong>
-              <small>{label} · Not connected</small>
+              <small>{label} · Not verified</small>
             </div>
           ))}
         </div>
