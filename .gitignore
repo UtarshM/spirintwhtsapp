@@ -1,0 +1,26 @@
+node_modules/
+.next/
+.env*
+!.env.example
+*.tsbuildinfo
+.DS_Store
+node_modules.previous/
+.next.previous/
+
+# Local dependency/cache backups and reference project
+node_modules.*/
+.next.*/
+/conversio/
+/.codebase-memory/
+
+# Local review screenshots and system metadata
+/docs/*.png
+/docs/*.jpg
+
+# Infrastructure state and private credentials
+.terraform/
+*.tfstate*
+*.tfvars
+*.pem
+*.key
+*.p12

@@ -1,0 +1,1 @@
+import Pricing from '@/components/marketing/pricing';export const metadata={title:'Pricing preview — Sprint by Scalezix',description:'Explore indicative plans and understand platform subscriptions and usage credits.'};export default Pricing;
