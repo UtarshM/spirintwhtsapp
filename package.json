@@ -8,7 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "worker:meta-events": "node --env-file=.env.local --import tsx services/worker/run-meta-events.ts"
+    "worker:meta-events": "node --env-file=.env.local --import tsx services/worker/run-meta-events.ts",
+    "voice:start": "node --env-file-if-exists=.env.local --import tsx services/voice/run.ts",
+    "voice:reconcile": "node --env-file-if-exists=.env.local --import tsx services/voice/reconcile.ts"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.900.0",
@@ -17,9 +19,11 @@
     "@supabase/supabase-js": "^2.80.0",
     "lucide-react": "^0.468.0",
     "next": "^16.0.0",
+    "plivo": "4.75.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "ws": "^8.22.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
@@ -27,6 +31,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/ws": "^8.18.2",
     "prettier": "^3.9.10",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"

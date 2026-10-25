@@ -27,9 +27,9 @@ const integrations = [
   [
     "plivo",
     "AI calling",
-    "Agent drafts, scripted previews and call-data foundations.",
-    "Connect an approved number and speech services; test conversations, recordings and transfer.",
-    "agents",
+    "Account agents, secure call controls, speech recognition, AI responses, spoken replies and transcripts.",
+    "Deploy the calling service to AWS, configure an approved number and pass live conversation, interruption, transfer and settlement tests.",
+    "voice-connected",
   ],
   [
     "razorpay",

@@ -95,6 +95,7 @@ export const groups = [
     icon: Phone,
     items: [
       ["voice-overview", "Dashboard"],
+      ["voice-connected", "Connection & live calls"],
       ["agents", "Agent builder"],
       ["call-center", "Call center"],
       ["call-logs", "Call logs & transcripts"],

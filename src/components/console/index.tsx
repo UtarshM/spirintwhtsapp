@@ -43,6 +43,7 @@ import { groups, names } from "./navigation";
 import Operations from "./operations";
 import ProviderInbox from "./provider-inbox";
 import IntegrationReadiness from "./integration-readiness";
+import ConnectedVoice from "./connected-voice";
 import { AccountProvider } from "../local-provider";
 import type { AccountIdentity } from "@/lib/workspace-document";
 import { createBrowserClient } from "@supabase/ssr";
@@ -414,6 +415,14 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         notify={notify}
       />
     );
+  else if (account && page === "voice-overview")
+    content = (
+      <ConnectedVoice
+        key={account.workspaceId}
+        account={account}
+        view="overview"
+      />
+    );
   else if (["voice-overview", "wa-overview", "email-overview"].includes(page))
     content = channelOverview(
       page === "voice-overview"
@@ -421,6 +430,25 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         : page === "wa-overview"
           ? "WhatsApp"
           : "Email",
+    );
+  else if (
+    page === "voice-connected" ||
+    (account && ["agents", "call-center", "call-logs"].includes(page))
+  )
+    content = (
+      <ConnectedVoice
+        key={account?.workspaceId}
+        account={account}
+        view={
+          page === "agents"
+            ? "agents"
+            : page === "call-center"
+              ? "calls"
+              : page === "call-logs"
+                ? "logs"
+                : "setup"
+        }
+      />
     );
   else if (["agents", "call-center", "call-logs"].includes(page))
     content = (

@@ -13,6 +13,18 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Build persistent voice container
+        run: docker build -f services/voice/Dockerfile -t sprint-voice:check .
+  voice_infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+      - run: terraform -chdir=infra/voice fmt -check
+      - run: terraform -chdir=infra/voice init -backend=false -input=false
+      - run: terraform -chdir=infra/voice validate
   database:
     runs-on: ubuntu-latest
     services:
@@ -49,6 +61,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/database.test.sql
           psql -v ON_ERROR_STOP=1 -f tests/workspace-draft.database.sql
           psql -v ON_ERROR_STOP=1 -f tests/meta-events.database.sql
+          psql -v ON_ERROR_STOP=1 -f tests/voice.database.sql
           python3 tests/database-concurrency.py --host 127.0.0.1 --port 5432
           python3 tests/workspace-draft-concurrency.py --host 127.0.0.1 --port 5432
           python3 tests/meta-events-concurrency.py --host 127.0.0.1 --port 5432
+          python3 tests/voice-concurrency.py --host 127.0.0.1 --port 5432

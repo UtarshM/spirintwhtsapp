@@ -13,10 +13,11 @@ WhatsApp, email and AI calling outreach workspace. **Development build: useful d
 | WhatsApp incoming | Signed event storage; atomic contact/conversation/message normalization; opt-in preservation; reply suppression; idempotent delivery receipts; late-receipt reconciliation | Official onboarding, ownership/token checks, template API, outbound worker, quality limits, media download and real Meta acceptance |
 | Provider inbox | Tenant-backed WhatsApp history/timeline, pagination, assignments, close/reopen and audited takeover that suppresses pending outreach | Real provider events in staging, reply sending, private attachments, internal notes and realtime acceptance |
 | Email | Gmail/Zoho OAuth routes, encrypted tokens and transport adapters; mailbox/template draft UI | Provider acceptance, refresh locking, mailbox discovery, caps, replies/checkpoints, bounce/unsubscribe and tracking |
-| Sequences & AI | Sequence/bot editors, explicit simulations, saved runs, reply/opt-out/handoff exits; voice and knowledge drafts | Durable scheduler, cross-channel frequency caps, actual LLMs, speech streaming, calls and transfer |
+| Sequences & AI | Sequence/bot editors, explicit simulations, saved runs and reply/opt-out/handoff exits | Durable scheduler, normalized execution, cross-channel frequency caps and live WhatsApp AI; sequences do not launch calls |
+| AI calling | Normalized account agents/hours/calls/transcripts; gated Plivo launch and signed callbacks; persistent Sarvam STT/LLM → Cartesia TTS runtime, interruptions, opt-out and cold-transfer code | Domain/AWS deployment, credentials, provider/latency/transfer acceptance, private recordings, bulk/sequence launch, separate scripts, voice selection/preview, advanced outcomes and calendar tools |
 | Lead capture & booking | CSV/forms/source tests, segments/qualification, calendar rules, conflict checks, appointment/reminder drafts | Lead Ads/Sheets/authenticated ingestion, automatic triggers, calendar OAuth, confirmed invites and reminder delivery |
 | Billing | Reservation/settlement/capture RPCs and regression tests; plans ₹2,999/₹3,999/₹9,999 per month + GST; read-only account orders/rates | Approved usage catalog, orders/subscriptions/top-ups, checkout, refunds, reconciliation and GST invoices |
-| Operations | App CI, database regression CI, partial AWS infrastructure | Deployable services/scheduler, IAM/networking, monitoring destinations, restore/load tests and support operations |
+| Operations | App/database CI; voice container definition and ECS Fargate/ALB infrastructure module; partial shared AWS infrastructure | Build/test container, configure existing network/secrets/certificate/DNS, deploy services/scheduler, restore/load tests and support operations |
 | Shopify | Not implemented | OAuth, signed order/checkout events, COD/cart workflows and store updates; deferred scope |
 
 See [the integration audit](docs/INTEGRATION_AUDIT.md) for code evidence, acceptance tests and the remaining build order. Menus, configuration drafts, OAuth callbacks and successful unit tests are not proof of provider delivery.
@@ -37,6 +38,7 @@ npm run dev
 - `/account/manage` — workspace creation, MFA/account controls and earlier normalized contacts/campaign records.
 - `/account/whatsapp-verification` — protected verification preparation; no badge application is submitted.
 - Account console → WhatsApp → Provider conversations — normalized database messages, kept separate from simulations.
+- Account console → AI Calling → Connection & live calls — normalized agents, calling hours, single-contact launch, call logs and transcripts. Provider configuration/acceptance gates remain closed.
 
 ```sh
 npm run typecheck
@@ -46,11 +48,13 @@ npm run build
 
 ## Supabase and draft storage
 
-Use separate projects for development, staging and production. Apply **all four** migrations in `supabase/migrations` in order. Configure environment variables and auth callback allowlists; never expose the service-role key. Owners/administrators verify TOTP MFA in Account controls before privileged writes. Server routes independently validate workspace membership.
+Use separate projects for development, staging and production. Apply **all five** migrations in `supabase/migrations` in order. Configure environment variables and auth callback allowlists; never expose the service-role key. Owners/administrators verify TOTP MFA in Account controls before privileged writes. Server routes independently validate workspace membership.
 
 `0003` stores a tenant-scoped planning document with an 8 MB request limit and atomic revision checks. The first draft copies earlier contacts and inactive campaign metadata; originals remain intact. Further draft edits do not update normalized provider tables. Failed saves preserve unsaved work for export; no anonymous sample data is silently imported. Real team membership and wallets are unaffected by draft rosters or sample credits.
 
 `0004` normalizes stored Meta messages and delivery receipts transactionally. A business phone number must have a unique, server-verified integration mapping. Do not mark a configuration draft as connected. Unknown senders become contacts with consent=false; existing consent is preserved. Incoming replies and manual takeover suppress pending outreach. Media identifiers are stored privately; downloads and outbound replies remain disabled.
+
+`0005` adds server-only voice settings and acceptance records, call-session binding, tenant transcript turns, atomic launch/concurrency/credit reservations, and idempotent duration settlement. Account calling uses these normalized records, not the planning document or sample agents. Apply this migration before opening the connected-calling screen.
 
 ## Meta event worker
 
@@ -66,15 +70,15 @@ It processes up to 50 due events, records bounded failure codes and backoff, and
 
 - **Meta:** official asset ownership, Embedded Signup, secure token storage and template/outbound acceptance remain pending. Do not collect access tokens in sample UI.
 - **Gmail/Zoho:** OAuth requires provider app configuration, exact callback allowlists, correct Zoho region and KMS-encrypted tokens. Refresh, send and reply synchronization need account-level acceptance.
-- **Voice:** Plivo approval, streaming speech/LLM service, private recordings and human transfer are pending. See [voice runtime requirements](services/voice/README.md).
+- **Voice:** The user-selected stack is Plivo + Sarvam/Cartesia. A persistent speech service and cold-transfer path are implemented but unactivated and untested with real providers. Server configuration, approved caller/destinations/rates, an unexpired workspace acceptance record and both enablement gates are required. See [voice setup and AWS runbook](services/voice/README.md).
 - **Razorpay:** signed captures credit only existing server-registered orders. Checkout stays hard-disabled until the catalog and financial acceptance tests are complete.
-- **AWS:** infrastructure definitions are partial; no deployment or cloud changes were performed. Vercel serves the web control plane; persistent workers/audio services need separate hosting.
+- **AWS:** The user plans AWS hosting after buying a domain. `infra/voice` defines the persistent ECS/ALB voice service and expects an existing VPC/subnets, outbound access, certificate, image, secrets and alarm destination. No AWS resources or DNS changes were made. Web control-plane hosting and shared worker deployment remain separate work.
 
 Changing environment flags alone does not activate production delivery or checkout.
 
 ## Verification
 
-Unit tests, strict TypeScript and optimized build are checked in CI. A separate PostgreSQL CI job applies the migrations and runs tenant, accounting, draft, Meta normalization and takeover tests. Disposable local SQL tests also verify replay, rollback, receipt ordering and concurrent draft saves. Hosted Supabase, provider delivery, cloud deployment and restore/load acceptance are **not** claimed.
+Unit tests, strict TypeScript and optimized build are configured in CI. The local suite now passes 68 tests, including 20 voice/runtime/reconciliation tests with simulated transports/sockets. A separate PostgreSQL CI job applies the migrations and runs tenant, accounting, draft, Meta normalization, takeover and voice tests. Disposable local SQL tests also verify concurrent credit reservations, draft saves, voice launch limits and one-time stream claims. The voice Terraform module validates locally; its Docker image has not been built because Docker is unavailable here. Voice image-build and Terraform-validation CI checks are configured but have not been verified on GitHub. Hosted Supabase, real speech/calls/transfers, provider delivery, cloud deployment and restore/load acceptance are **not** claimed.
 
 Never run `tests/database-bootstrap.sql` against an existing or production database. It creates a minimal auth shim for disposable PostgreSQL testing only.
 
