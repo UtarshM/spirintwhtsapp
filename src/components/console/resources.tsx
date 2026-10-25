@@ -223,9 +223,11 @@ const definitions: Record<string, Definition> = {
 };
 export default function Resources({
   kind,
+  provider,
   notify,
 }: {
   kind: Resource["kind"];
+  provider?: string;
   notify: (s: string) => void;
 }) {
   const { state: s, update } = useWorkspace();
@@ -236,7 +238,10 @@ export default function Resources({
     [showArchived, setShowArchived] = useState(false);
   if (!definition) return null;
   const rows = s.resources.filter(
-      (r) => r.kind === kind && (showArchived || r.data.archived !== "true"),
+      (r) =>
+        r.kind === kind &&
+        (!provider || r.data.provider === provider) &&
+        (showArchived || r.data.archived !== "true"),
     ),
     item = s.resources.find((r) => r.id === preview);
   const capture = (
@@ -284,7 +289,7 @@ export default function Resources({
   return (
     <>
       <Panel
-        title={definition.title}
+        title={provider || definition.title}
         description={definition.description}
         action={
           <button className="primary" onClick={() => setEdit(null)}>
@@ -416,6 +421,7 @@ export default function Resources({
                 definition.fields.forEach(
                   (field) => (data[field.key] = formValue(f, field.key)),
                 );
+                if (provider) data.provider = provider;
                 for (const field of definition.fields) {
                   if (field.type === "url" && data[field.key])
                     data[field.key] = validatePublicUrl(data[field.key]);
@@ -436,6 +442,12 @@ export default function Resources({
                     throw Error("Use a valid email address");
                 if (kind === "booking" && data.status !== "Cancelled")
                   validateBooking(s.resources, data, edit?.id);
+                if (kind === "booking") {
+                  data.start = new Date(data.start).toISOString();
+                  data.end = new Date(data.end).toISOString();
+                  data.timezone =
+                    Intl.DateTimeFormat().resolvedOptions().timeZone;
+                }
                 if (kind === "ivr") {
                   const lines = data.routes.split("\n").filter(Boolean);
                   const digits = lines.map((line) => line.split("=")[0].trim());
@@ -509,8 +521,17 @@ export default function Resources({
                     ))}
                   </select>
                 ) : field.options ? (
-                  <select name={field.key} defaultValue={edit?.data[field.key]}>
-                    {field.options.map((option) => (
+                  <select
+                    name={field.key}
+                    defaultValue={
+                      edit?.data[field.key] ||
+                      (field.key === "provider" ? provider : undefined)
+                    }
+                  >
+                    {(field.key === "provider" && provider
+                      ? [provider]
+                      : field.options
+                    ).map((option) => (
                       <option key={option}>{option}</option>
                     ))}
                   </select>
@@ -531,7 +552,19 @@ export default function Resources({
                     step={field.key === "price" ? "0.01" : undefined}
                     maxLength={field.type === "url" ? 2000 : 200}
                     required={field.required}
-                    defaultValue={edit?.data[field.key]}
+                    defaultValue={
+                      field.type === "datetime-local" && edit?.data[field.key]
+                        ? new Date(
+                            Date.parse(edit.data[field.key]) -
+                              new Date(
+                                edit.data[field.key],
+                              ).getTimezoneOffset() *
+                                60000,
+                          )
+                            .toISOString()
+                            .slice(0, 16)
+                        : edit?.data[field.key]
+                    }
                   />
                 )}
               </label>

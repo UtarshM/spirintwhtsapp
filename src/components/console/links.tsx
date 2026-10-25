@@ -3,13 +3,25 @@ import { useState } from "react";
 import QRCode from "qrcode";
 import { chatLink } from "@/lib/outreach";
 import { Panel, formValue, download } from "./ui";
-export default function Links({ notify }: { notify: (s: string) => void }) {
+export default function Links({
+  notify,
+  mode = "links",
+}: {
+  notify: (s: string) => void;
+  mode?: string;
+}) {
   const [link, setLink] = useState(""),
     [qr, setQr] = useState(""),
     [embed, setEmbed] = useState("");
   return (
     <Panel
-      title="WhatsApp links, QR & website button"
+      title={
+        mode === "qr"
+          ? "WhatsApp QR codes"
+          : mode === "widget"
+            ? "Website chat button"
+            : "WhatsApp links"
+      }
       description="Generate locally. Your number and message are encoded into the link; nothing is sent by this tool."
     >
       <form

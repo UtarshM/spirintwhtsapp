@@ -27,7 +27,14 @@ export function audience(s: LocalWorkspace, data: Record<string, string>) {
           .includes(data.query.toLowerCase())) &&
       (!data.tag || c.tags.includes(data.tag)) &&
       (!data.stage || c.stage === data.stage) &&
-      (data.consent !== "Yes" || (c.consent && !c.optedOut)),
+      (data.consent !== "Yes" || (c.consent && !c.optedOut)) &&
+      (data.consent !== "No" || !c.consent) &&
+      (data.consent !== "Opted out" || c.optedOut) &&
+      (!data.owner || c.owner === data.owner) &&
+      (data.address !== "Email" || !!c.email) &&
+      (data.address !== "Phone" || !!c.phone) &&
+      (!data.createdAfter ||
+        Date.parse(c.createdAt) >= Date.parse(`${data.createdAfter}T00:00:00`)),
   );
 }
 export function addActivity(
@@ -319,11 +326,46 @@ export function validateBooking(
     end = Date.parse(data.end);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start)
     throw Error("Choose an end time after the start time");
+  const availability = resources.find(
+    (r) => r.kind === "availability" && r.data.archived !== "true",
+  );
+  if (availability) {
+    const parts = (at: number) =>
+      Object.fromEntries(
+        new Intl.DateTimeFormat("en-GB", {
+          timeZone: availability.data.timezone,
+          weekday: "short",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        })
+          .formatToParts(at)
+          .map((p) => [p.type, p.value]),
+      );
+    const a = parts(start),
+      b = parts(end);
+    const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(
+      a.weekday,
+    );
+    if (
+      !availability.data.days.split(",").includes(String(day)) ||
+      `${a.year}-${a.month}-${a.day}` !== `${b.year}-${b.month}-${b.day}` ||
+      `${a.hour}:${a.minute}` < availability.data.start ||
+      `${b.hour}:${b.minute}` > availability.data.end
+    )
+      throw Error(
+        "This appointment falls outside your saved calendar availability.",
+      );
+  }
   if (
     resources.some(
       (r) =>
         r.kind === "booking" &&
         r.id !== id &&
+        r.data.archived !== "true" &&
         r.data.status !== "Cancelled" &&
         Date.parse(r.data.start) < end &&
         Date.parse(r.data.end) > start,

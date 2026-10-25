@@ -1,5 +1,5 @@
 "use client";
-import SalesMark from '@/components/sales-mark';
+import SalesMark from "@/components/sales-mark";
 import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { ShieldCheck, ArrowRight } from "lucide-react";
@@ -60,6 +60,15 @@ export default function Account({
           sprint.
         </a>
         <div>
+          {workspaceId && (
+            <a
+              className="secondary"
+              href="/account"
+              style={{ marginRight: 15 }}
+            >
+              Open full workspace
+            </a>
+          )}
           <span>
             {email} · {role || "New account"}
           </span>
@@ -84,7 +93,15 @@ export default function Account({
             </p>
           </div>
         </div>
-        {workspaceId && <a className="secondary" style={{marginBottom:24}} href="/account/whatsapp-verification">WhatsApp verification setup</a>}
+        {workspaceId && (
+          <a
+            className="secondary"
+            style={{ marginBottom: 24 }}
+            href="/account/whatsapp-verification"
+          >
+            WhatsApp verification setup
+          </a>
+        )}
         {status && (
           <div className="notice" role="status">
             <ShieldCheck size={18} />

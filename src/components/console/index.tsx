@@ -39,95 +39,33 @@ import Tasks from "./tasks";
 import Reports from "./reports";
 import Settings from "./settings";
 import { Panel, Empty, Badge, date } from "./ui";
-type Group = { name: string; icon: typeof Users; items: [string, string][] };
-const groups: Group[] = [
-  {
-    name: "Contacts",
-    icon: Users,
-    items: [
-      ["contacts", "All contacts"],
-      ["segments", "Segments"],
-    ],
-  },
-  {
-    name: "Campaigns",
-    icon: Megaphone,
-    items: [
-      ["campaigns", "All campaigns"],
-      ["sequences", "Sequences"],
-      ["sources", "Lead sources & ads"],
-    ],
-  },
-  {
-    name: "AI Calling",
-    icon: Phone,
-    items: [
-      ["voice-overview", "Dashboard"],
-      ["agents", "Agent Builder"],
-      ["call-center", "Call Center"],
-      ["call-logs", "Call Logs"],
-      ["transfers", "Transfer Requests"],
-      ["ivr", "IVR Menus"],
-      ["bookings", "Appointments"],
-    ],
-  },
-  {
-    name: "WhatsApp",
-    icon: MessageCircle,
-    items: [
-      ["wa-overview", "Dashboard"],
-      ["wa-inbox", "Inbox"],
-      ["wa-templates", "Templates"],
-      ["wa-broadcast", "Broadcasts"],
-      ["bots", "Chatbot Flows"],
-      ["chat-agents", "AI Agents"],
-      ["forms", "Forms"],
-      ["catalog", "Catalog & Payments"],
-      ["links", "Links, QR & Widget"],
-      ["verification", "Verification"],
-    ],
-  },
-  {
-    name: "Email",
-    icon: Mail,
-    items: [
-      ["email-overview", "Dashboard"],
-      ["email-inbox", "Inbox"],
-      ["email-templates", "Templates"],
-      ["senders", "Mail Setup"],
-      ["identities", "Identity Setup"],
-    ],
-  },
-];
-const singles = [
-  ["qualified", "Qualified Leads", Sparkles],
-  ["tasks", "Follow-up Tasks", CalendarDays],
-  ["analytics", "Analytics", BarChart3],
-  ["automation", "Automation Reports", GitBranch],
-  ["windows", "Working days", CalendarDays],
-  ["integrations", "Integrations", Link2],
-  ["billing", "Billing & Credits", Wallet],
-  ["settings", "Settings", SettingsIcon],
-  ["team", "Team", Users],
-] as const;
-const names = Object.fromEntries([
-  ["overview", "Overview"],
-  ...groups.flatMap((g) =>
-    g.items.map(([id, title]) => [id, `${g.name} / ${title}`]),
-  ),
-  ...singles.map(([id, title]) => [id, title]),
-]);
-export default function Console() {
-  return (
+import { groups, names } from "./navigation";
+import Operations from "./operations";
+import { AccountProvider } from "../local-provider";
+import type { AccountIdentity } from "@/lib/workspace-document";
+import { createBrowserClient } from "@supabase/ssr";
+export default function Console({ account }: { account?: AccountIdentity }) {
+  return account ? (
+    <AccountProvider key={account.workspaceId} account={account}>
+      <WorkspaceConsole account={account} />
+    </AccountProvider>
+  ) : (
     <LocalProvider>
       <WorkspaceConsole />
     </LocalProvider>
   );
 }
-function WorkspaceConsole() {
-  const { state: s, ready, error, update } = useWorkspace();
+function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
+  const {
+    state: s,
+    ready,
+    error,
+    update,
+    saveStatus,
+    canEdit,
+  } = useWorkspace();
   const [page, setPage] = useState("overview"),
-    [expanded, setExpanded] = useState<string[]>(["WhatsApp"]),
+    [expanded, setExpanded] = useState<string[]>([]),
     [mobile, setMobile] = useState(false),
     [toast, setToast] = useState(""),
     [notifications, setNotifications] = useState(false);
@@ -137,8 +75,7 @@ function WorkspaceConsole() {
       if (names[id]) {
         setPage(id);
         const group = groups.find((g) => g.items.some(([key]) => key === id));
-        if (group)
-          setExpanded((current) => [...new Set([...current, group.name])]);
+        if (group) setExpanded([group.name]);
       }
     };
     sync();
@@ -154,7 +91,7 @@ function WorkspaceConsole() {
     setPage(id);
     window.history.replaceState(null, "", `#${id}`);
     const group = groups.find((g) => g.items.some(([key]) => key === id));
-    if (group) setExpanded((current) => [...new Set([...current, group.name])]);
+    if (group) setExpanded([group.name]);
     setMobile(false);
     setNotifications(false);
   };
@@ -432,17 +369,29 @@ function WorkspaceConsole() {
         </Panel>
       </>
     );
-  else if (["contacts", "segments", "qualified"].includes(page))
+  else if (
+    ["contacts", "segments", "qualified", "contact-filters"].includes(page)
+  )
     content = (
       <Contacts
         qualified={page === "qualified"}
+        advanced={page === "contact-filters"}
         segments={page === "segments"}
         notify={notify}
       />
     );
-  else if (["campaigns", "wa-broadcast"].includes(page))
+  else if (
+    [
+      "campaigns",
+      "wa-broadcast",
+      "audience-review",
+      "campaign-schedule",
+    ].includes(page)
+  )
     content = (
       <Campaigns
+        key={page}
+        initialStatus={page === "campaign-schedule" ? "Scheduled" : ""}
         channel={page === "wa-broadcast" ? "WhatsApp" : undefined}
         notify={notify}
       />
@@ -483,7 +432,8 @@ function WorkspaceConsole() {
         notify={notify}
       />
     );
-  else if (page === "links") content = <Links notify={notify} />;
+  else if (["links", "qr", "widget"].includes(page))
+    content = <Links key={page} mode={page} notify={notify} />;
   else if (page === "bots") content = <Bots notify={notify} />;
   else if (page === "analytics" || page === "automation")
     content = <Reports automation={page === "automation"} />;
@@ -514,11 +464,45 @@ function WorkspaceConsole() {
           an application.
         </p>
         <a className="primary" href="/account/whatsapp-verification">
-          Sign in to manage verification <ArrowUpRight size={16} />
+          {account
+            ? "Manage verification preparation"
+            : "Sign in to manage verification"}{" "}
+          <ArrowUpRight size={16} />
         </a>
       </Panel>
     );
   else if (page === "tasks") content = <Tasks notify={notify} />;
+  else if (
+    [
+      "wa-onboarding",
+      "wa-health",
+      "inbox-overview",
+      "handoffs",
+      "automation-handoffs",
+      "sheets",
+      "webhooks",
+      "email-setup",
+      "email-sync",
+      "availability",
+      "reminders",
+      "channel-costs",
+      "delivery",
+      "orders",
+      "invoices",
+      "rates",
+      "campaign-history",
+      "activity",
+    ].includes(page)
+  )
+    content = (
+      <Operations
+        key={page}
+        page={page}
+        navigate={navigate}
+        notify={notify}
+        account={account}
+      />
+    );
   else if (page === "integrations")
     content = (
       <>
@@ -613,7 +597,9 @@ function WorkspaceConsole() {
           <span>S</span>
           <div>
             <strong>{s.settings.name}</strong>
-            <small>Local sample workspace</small>
+            <small>
+              {account ? "Account workspace" : "Local sample workspace"}
+            </small>
           </div>
         </div>
         <nav aria-label="Workspace navigation">
@@ -634,9 +620,7 @@ function WorkspaceConsole() {
                 aria-controls={`group-${group.name.replaceAll(" ", "-")}`}
                 onClick={() =>
                   setExpanded((current) =>
-                    current.includes(group.name)
-                      ? current.filter((g) => g !== group.name)
-                      : [...current, group.name],
+                    current.includes(group.name) ? [] : [group.name],
                   )
                 }
               >
@@ -667,24 +651,19 @@ function WorkspaceConsole() {
               )}
             </div>
           ))}
-          <div className="console-nav-label">LEADS & OPERATIONS</div>
-          {singles.map(([id, title, Icon]) => (
-            <button
-              key={id}
-              aria-current={page === id ? "page" : undefined}
-              className={`console-nav-item ${page === id ? "active" : ""}`}
-              onClick={() => navigate(id)}
-            >
-              <Icon size={18} />
-              {title}
-            </button>
-          ))}
         </nav>
-        <a className="console-account-link" href="/account">
+        <a
+          className="console-account-link"
+          href={account ? "/account/manage" : "/account"}
+        >
           <span>SK</span>
           <div>
-            <strong>Account workspace</strong>
-            <small>Sign in for secure account access</small>
+            <strong>{account ? account.email : "Account workspace"}</strong>
+            <small>
+              {account
+                ? `${account.role} · Account controls`
+                : "Sign in for secure account access"}
+            </small>
           </div>
           <ArrowUpRight size={16} />
         </a>
@@ -698,6 +677,7 @@ function WorkspaceConsole() {
               onClick={() => setMobile(true)}
             >
               <Menu size={20} />
+              <span className="console-menu-text">Modules</span>
             </button>
             <span>Workspace</span>
             <span>/</span>
@@ -720,9 +700,34 @@ function WorkspaceConsole() {
             >
               <Bell size={19} />
             </button>
-            <a href="/login" className="console-signin">
-              Sign in
-            </a>
+            {account ? (
+              <button
+                className="console-signin"
+                onClick={async () => {
+                  if (
+                    (saveStatus.startsWith("Saving") ||
+                      saveStatus.startsWith("Unsaved")) &&
+                    !window.confirm(
+                      "Changes may be unsaved. Export your backup before signing out. Sign out now?",
+                    )
+                  )
+                    return;
+                  const client = createBrowserClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+                  );
+                  const { error } = await client.auth.signOut();
+                  if (error) notify("Sign out failed. Try again.");
+                  else location.href = "/login";
+                }}
+              >
+                Sign out
+              </button>
+            ) : (
+              <a href="/login" className="console-signin">
+                Sign in
+              </a>
+            )}
           </div>
         </header>
         {notifications && (
@@ -749,8 +754,9 @@ function WorkspaceConsole() {
         <div className="console-local-banner">
           <ShieldCheck size={16} />
           <span>
-            Local preview · Data stays in this browser. No live messages, calls,
-            applications or payments.
+            {account
+              ? "Draft workspace · Saved to your account. Live messages, calls, applications and payments are disabled."
+              : "Local preview · Data stays in this browser. No live messages, calls, applications or payments."}
           </span>
         </div>
         <div className="console-content">
@@ -765,8 +771,21 @@ function WorkspaceConsole() {
               </button>
             </div>
           )}
+          {account && (
+            <div className="console-save-status" role="status">
+              <span>{saveStatus}</span>
+              <a href="/account/manage">Account & security</a>
+            </div>
+          )}
+          {account && !canEdit && (
+            <div className="console-error">
+              Read-only access. Owners and administrators can edit drafts after
+              authenticator verification in{" "}
+              <a href="/account/manage">Account & security</a>.
+            </div>
+          )}
           {!ready ? (
-            <Empty>Loading your local workspace…</Empty>
+            <Empty>Loading your workspace…</Empty>
           ) : (
             <div key={page}>
               {page !== "overview" && (

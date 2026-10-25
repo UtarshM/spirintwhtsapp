@@ -16,16 +16,18 @@ import { audience, runCampaign } from "@/lib/outreach";
 import { Panel, Empty, Modal, Badge, formValue, date, SearchBox } from "./ui";
 export default function Campaigns({
   channel,
+  initialStatus = "",
   notify,
 }: {
   channel?: Channel;
+  initialStatus?: string;
   notify: (s: string) => void;
 }) {
   const { state: s, update } = useWorkspace();
   const [edit, setEdit] = useState<LocalCampaign | null | undefined>(),
     [detail, setDetail] = useState(""),
     [query, setQuery] = useState(""),
-    [statusFilter, setStatusFilter] = useState(""),
+    [statusFilter, setStatusFilter] = useState(initialStatus),
     [selected, setSelected] = useState<string[]>([]),
     [kind, setKind] = useState<Channel>(channel || "WhatsApp");
   const current = s.campaigns.find((c) => c.id === detail);
@@ -47,6 +49,18 @@ export default function Campaigns({
         campaigns: state.campaigns.map((x) =>
           x.id === c.id ? { ...x, status, updatedAt: now() } : x,
         ),
+        activities: [
+          ...state.activities,
+          {
+            id: uid(),
+            contactId: "",
+            campaignId: c.id,
+            kind: "note",
+            channel: c.channel,
+            description: `Campaign ${status.toLowerCase()} in draft workspace`,
+            at: now(),
+          },
+        ],
       }))
     )
       notify(`Campaign ${status.toLowerCase()} locally`);
@@ -155,6 +169,18 @@ export default function Campaigns({
                   campaigns: edit
                     ? state.campaigns.map((x) => (x.id === edit.id ? c : x))
                     : [...state.campaigns, c],
+                  activities: [
+                    ...state.activities,
+                    {
+                      id: uid(),
+                      contactId: "",
+                      campaignId: c.id,
+                      kind: "note",
+                      channel: c.channel,
+                      description: `${edit ? "Updated" : "Created"} ${c.status.toLowerCase()} campaign · Schedule intent only`,
+                      at: now(),
+                    },
+                  ],
                 }))
               ) {
                 setEdit(undefined);

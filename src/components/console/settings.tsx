@@ -19,7 +19,7 @@ export default function Settings({
   view: string;
   notify: (s: string) => void;
 }) {
-  const { state: s, update, replace } = useWorkspace();
+  const { state: s, update, replace, storage } = useWorkspace();
   const [channel, setChannel] = useState<Channel>("WhatsApp"),
     [reset, setReset] = useState(false),
     [importData, setImportData] = useState<ReturnType<
@@ -403,7 +403,11 @@ export default function Settings({
       </Panel>
       <Panel
         title="Data & backups"
-        description="Backups contain local sample information. Do not import live customer data into this preview."
+        description={
+          storage === "account"
+            ? "Export your draft workspace, including unsaved changes, before replacing it. Account backups never include provider credentials."
+            : "Backups contain local sample information. Do not import live customer data into this preview."
+        }
       >
         <div className="console-actions">
           <button
@@ -418,27 +422,29 @@ export default function Settings({
           >
             Export backup
           </button>
-          <button
-            className="secondary"
-            onClick={() => {
-              try {
-                const raw = localStorage.getItem(storageKey);
-                if (!raw) {
-                  notify("No stored workspace file yet");
-                  return;
+          {storage === "browser" && (
+            <button
+              className="secondary"
+              onClick={() => {
+                try {
+                  const raw = localStorage.getItem(storageKey);
+                  if (!raw) {
+                    notify("No stored workspace file yet");
+                    return;
+                  }
+                  download(
+                    "sprint-stored-data-recovery.json",
+                    raw,
+                    "application/json",
+                  );
+                } catch {
+                  notify("Browser storage is unavailable");
                 }
-                download(
-                  "sprint-stored-data-recovery.json",
-                  raw,
-                  "application/json",
-                );
-              } catch {
-                notify("Browser storage is unavailable");
-              }
-            }}
-          >
-            Download stored recovery data
-          </button>
+              }}
+            >
+              Download stored recovery data
+            </button>
+          )}
           <label className="secondary console-file">
             Review backup import
             <input
@@ -461,9 +467,11 @@ export default function Settings({
               }}
             />
           </label>
-          <button className="secondary" onClick={() => setReset(true)}>
-            Reset sample workspace
-          </button>
+          {storage === "browser" && (
+            <button className="secondary" onClick={() => setReset(true)}>
+              Reset sample workspace
+            </button>
+          )}
         </div>
       </Panel>
       {importData && (
@@ -498,7 +506,7 @@ export default function Settings({
               }
             }}
           >
-            Replace local workspace
+            Replace draft workspace
           </button>
         </Modal>
       )}

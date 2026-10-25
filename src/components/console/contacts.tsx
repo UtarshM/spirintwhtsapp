@@ -34,13 +34,16 @@ import {
 export default function Contacts({
   qualified = false,
   segments = false,
+  advanced = false,
   notify,
 }: {
   qualified?: boolean;
   segments?: boolean;
+  advanced?: boolean;
   notify: (s: string) => void;
 }) {
   const { state: s, update } = useWorkspace();
+  const [filters, setFilters] = useState<Record<string, string>>({});
   const [query, setQuery] = useState(""),
     [edit, setEdit] = useState<LocalContact | null | undefined>(),
     [segment, setSegment] = useState(""),
@@ -48,8 +51,14 @@ export default function Contacts({
       null,
     );
   const selectedSegment = s.resources.find((r) => r.id === segment);
-  const people = (
-    selectedSegment ? audience(s, selectedSegment.data) : s.contacts
+  const people = audience(
+    {
+      ...s,
+      contacts: selectedSegment
+        ? audience(s, selectedSegment.data)
+        : s.contacts,
+    },
+    filters,
   ).filter(
     (c) =>
       (!qualified || c.stage === "Qualified") &&
@@ -78,7 +87,7 @@ export default function Contacts({
               ? "Qualified leads"
               : "Contacts"
         }
-        description="Local sample contacts · Consent is never inferred from an import."
+        description="Workspace contacts · Consent is never inferred from an import."
         action={
           <div className="console-actions">
             <button
@@ -170,6 +179,76 @@ export default function Contacts({
             Export filtered CSV
           </button>
         </div>
+        <details className="console-filter-panel" open={advanced || undefined}>
+          <summary>Advanced contact filters</summary>
+          <div className="console-form-grid">
+            {(
+              [
+                ["stage", "Lead status", leadStatuses],
+                [
+                  "owner",
+                  "Owner",
+                  [...new Set(s.contacts.map((c) => c.owner))],
+                ],
+                ["consent", "Consent", ["Yes", "No", "Opted out"]],
+                ["address", "Available channel", ["Email", "Phone"]],
+                ["tag", "Tag", [...new Set(s.contacts.flatMap((c) => c.tags))]],
+              ] as [string, string, string[]][]
+            ).map(([key, label, values]) => (
+              <label key={key}>
+                {label}
+                <select
+                  value={filters[key] || ""}
+                  onChange={(e) =>
+                    setFilters((current) => ({
+                      ...current,
+                      [key]: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Any</option>
+                  {values.filter(Boolean).map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
+            <label>
+              Created on or after
+              <input
+                type="date"
+                value={filters.createdAfter || ""}
+                onChange={(e) =>
+                  setFilters((current) => ({
+                    ...current,
+                    createdAfter: e.target.value,
+                  }))
+                }
+              />
+            </label>
+          </div>
+          <div className="console-actions">
+            <button className="secondary" onClick={() => setFilters({})}>
+              Clear filters
+            </button>
+            <button
+              className="secondary"
+              onClick={() => {
+                setEditSegment({
+                  id: "",
+                  kind: "segment",
+                  name: "",
+                  data: { ...filters, query },
+                  updatedAt: now(),
+                });
+                setSegmentModal(true);
+              }}
+            >
+              Save filters as segment
+            </button>
+            <span>{people.length} matching contacts</span>
+          </div>
+        </details>
         {segments && (
           <div className="console-card-grid">
             {s.resources
@@ -388,7 +467,9 @@ export default function Contacts({
       {segmentModal && (
         <Modal
           title={
-            editSegment ? "Edit audience segment" : "Create audience segment"
+            editSegment?.id
+              ? "Edit audience segment"
+              : "Create audience segment"
           }
           close={() => setSegmentModal(false)}
         >
@@ -401,6 +482,7 @@ export default function Contacts({
                 kind: "segment",
                 name: formValue(f, "name"),
                 data: {
+                  ...editSegment?.data,
                   query: formValue(f, "query"),
                   tag: formValue(f, "tag"),
                   stage: formValue(f, "stage"),
@@ -411,7 +493,7 @@ export default function Contacts({
               if (
                 update((current) => ({
                   ...current,
-                  resources: editSegment
+                  resources: editSegment?.id
                     ? current.resources.map((r) =>
                         r.id === resource.id ? resource : r,
                       )
@@ -463,6 +545,8 @@ export default function Contacts({
                 name="consent"
                 defaultValue={editSegment?.data.consent || ""}
               >
+                <option value="No">Not recorded</option>
+                <option value="Opted out">Opted out</option>
                 <option value="">Any</option>
                 <option>Yes</option>
               </select>

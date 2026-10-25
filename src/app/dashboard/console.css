@@ -9,6 +9,50 @@
   min-height: 100dvh;
   background: #f5f7fb;
 }
+.console-save-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  color: #435570;
+  font-size: 12px;
+}
+.console-menu-text {
+  font-size: 12px;
+  font-weight: 650;
+}
+.console-mobile-menu {
+  gap: 7px;
+}
+.console-save-status a {
+  color: #2856c7;
+  text-decoration: underline;
+}
+.console-filter-panel {
+  padding: 18px;
+  margin: 18px 0;
+  border: 1px solid #dce4ef;
+  border-radius: 12px;
+}
+.console-filter-panel summary {
+  cursor: pointer;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+.console-setup-steps {
+  display: grid;
+  gap: 18px;
+  padding-left: 24px;
+  margin: 24px 0;
+}
+.console-setup-steps li {
+  padding-left: 8px;
+}
+.console-setup-steps span {
+  display: block;
+  color: var(--console-muted);
+  margin-top: 4px;
+}
 .outreach-console button,
 .outreach-console a,
 .outreach-console input,
@@ -28,7 +72,7 @@
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #35445e transparent;
-  padding: 30px 14px 0;
+  padding: 20px 14px 0;
 }
 .console-logo {
   display: flex;
@@ -72,7 +116,7 @@
   padding: 14px 10px;
   border: 1px solid #30405b;
   border-radius: 10px;
-  margin: 20px 0 24px;
+  margin: 14px 0 12px;
 }
 .console-workspace-switch > span,
 .console-account-link > span {
@@ -99,7 +143,7 @@
   padding-bottom: 24px;
 }
 .console-nav-label {
-  padding: 24px 12px 10px;
+  padding: 16px 12px 8px;
   font-size: 10px;
   letter-spacing: 1.7px;
   font-weight: 700;
@@ -110,7 +154,7 @@
   align-items: center;
   width: 100%;
   gap: 11px;
-  padding: 12px;
+  padding: 10px 12px;
   min-height: 44px;
   font-size: 13px;
   border-radius: 8px;
