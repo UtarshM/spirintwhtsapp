@@ -1322,3 +1322,151 @@
     font-size: 23px;
   }
 }
+.console-rich-preview {
+  background: #f5faf7;
+  border: 1px solid #e0eae4;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 14px 0;
+  min-width: 0;
+}
+.console-rich-preview h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.console-rich-preview p {
+  white-space: pre-wrap;
+  color: #344f45;
+  overflow-wrap: anywhere;
+}
+.console-template-media {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  background: #e7f0eb;
+  color: #557166;
+}
+.console-template-media svg {
+  flex-shrink: 0;
+}
+.console-template-media small {
+  font-size: 11px;
+  margin-top: 4px;
+  color: #6a8176;
+  overflow-wrap: anywhere;
+}
+.console-template-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 14px;
+}
+.console-template-actions > span {
+  padding: 10px;
+  border: 1px solid #d9e6de;
+  border-radius: 6px;
+  color: #2b7160;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.console-template-actions small {
+  font-size: 9px;
+  color: #7e9087;
+}
+.console-carousel {
+  display: flex;
+  overflow: auto;
+  gap: 14px;
+  margin-top: 18px;
+  padding-bottom: 8px;
+}
+.console-carousel > article {
+  width: 230px;
+  max-width: 90%;
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid #dce6df;
+  border-radius: 9px;
+  padding: 16px;
+}
+.console-carousel > article > small {
+  margin-bottom: 10px;
+}
+.console-carousel > article > strong {
+  display: block;
+  margin: 12px 0 8px;
+}
+.console-template-review {
+  margin: 25px 0;
+  padding-top: 20px;
+  border-top: 1px solid #e4eaf3;
+}
+.console-template-review > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.console-template-review > header label {
+  margin-bottom: 0;
+}
+.console-button-editor {
+  padding: 20px;
+  border: 1px solid #e1e8f2;
+  border-radius: 9px;
+  margin: 20px 0;
+}
+.console-button-row {
+  padding: 18px 0;
+  border-bottom: 1px solid #edf1f7;
+  margin-bottom: 18px;
+}
+.console-button-row label {
+  margin-bottom: 12px;
+}
+.console-carousel-editor {
+  padding: 22px;
+  border-radius: 10px;
+  background: #f7f9fd;
+  margin: 24px 0;
+}
+.console-carousel-editor > p {
+  margin-top: 10px;
+}
+.console-carousel-editor > article {
+  border: 1px solid #dee6f1;
+  border-radius: 8px;
+  background: #fff;
+  padding: 18px;
+  margin: 20px 0;
+}
+.console-carousel-editor > article > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.console-thread-subject {
+  display: block;
+  font-size: 12px;
+  color: #526d90;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+.console-conversation-heading p {
+  font-size: 12px;
+}
+.console-conversation-heading small {
+  font-size: 10px;
+  margin-bottom: 8px;
+}

@@ -67,6 +67,8 @@ Ecommerce features found in the references (catalogs, carts, orders, Shopify) ar
 
 ## Sources
 
+Implementation follow-up: the channel console and subsequent rich-template/email/import milestone now cover grouped navigation, coherent local counts, contact details and editable segments, CSV field mapping, campaign lifecycle simulations, rich carousel/button previews with immutable recipient content, sender-specific local email conversations, inbox drafts, sequences, voice previews, bot/lead-capture drafts and QR tools. See RELEASE_STATUS.md for verified behavior and remaining gates. The table above remains the pre-milestone audit; provider-backed capabilities and authenticated production parity are still outstanding.
+
 - RapidSales home: https://www.rapidsales.ai/
 - RapidSales features: https://www.rapidsales.ai/features
 - Voice: https://www.rapidsales.ai/features/ai-calling-agent

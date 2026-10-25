@@ -3,7 +3,13 @@ import { useState, useEffect } from "react";
 import { useWorkspace } from "../local-provider";
 import { uid, now, recordIncoming, type Channel } from "@/lib/local-workspace";
 import { addActivity } from "@/lib/outreach";
-import { Panel, Empty, Badge, SearchBox, date } from "./ui";
+import { Panel, Empty, Badge, SearchBox, date, Modal, formValue } from "./ui";
+import {
+  messagesForThread,
+  createEmailThread,
+  saveThreadReply,
+} from "@/lib/local-email";
+import TemplatePreview from "./template-preview";
 export default function Inbox({
   channel,
   notify,
@@ -13,18 +19,30 @@ export default function Inbox({
 }) {
   const { state: s, update } = useWorkspace();
   const [selected, setSelected] = useState(""),
-    [query, setQuery] = useState("");
+    [query, setQuery] = useState(""),
+    [mailbox, setMailbox] = useState("all"),
+    [status, setStatus] = useState("all"),
+    [compose, setCompose] = useState(false);
+  const senders = s.resources.filter((r) => r.kind === "sender");
   const threads = s.threads.filter(
     (t) =>
       t.channel === channel &&
-      s.contacts
-        .find((c) => c.id === t.contactId)
-        ?.name.toLowerCase()
+      (status === "all" || t.status === status) &&
+      (channel !== "Email" ||
+        mailbox === "all" ||
+        (mailbox === "unassigned" ? !t.mailboxId : t.mailboxId === mailbox)) &&
+      `${s.contacts.find((c) => c.id === t.contactId)?.name || ""} ${t.subject || ""} ${senders.find((r) => r.id === t.mailboxId)?.data.address || ""}`
+        .toLowerCase()
         .includes(query.toLowerCase()),
   );
   const thread = threads.find((t) => t.id === selected) || threads[0],
     contact = s.contacts.find((c) => c.id === thread?.contactId);
-  useEffect(() => setSelected(""), [channel]);
+  useEffect(() => {
+    setSelected("");
+    setMailbox("all");
+    setStatus("all");
+    setCompose(false);
+  }, [channel]);
   return (
     <Panel
       title={`${channel} inbox`}
@@ -36,46 +54,79 @@ export default function Inbox({
           onChange={setQuery}
           placeholder="Search conversations"
         />
+        {channel === "Email" && (
+          <>
+            <select
+              aria-label="Email mailbox"
+              value={mailbox}
+              onChange={(e) => setMailbox(e.target.value)}
+            >
+              <option value="all">All local mailboxes</option>
+              <option value="unassigned">Unassigned sample mailbox</option>
+              {senders.map((sender) => (
+                <option key={sender.id} value={sender.id}>
+                  {sender.name}
+                  {sender.data.archived === "true" ? " (archived)" : ""} ·{" "}
+                  {sender.data.address}
+                </option>
+              ))}
+            </select>
+            <button className="primary" onClick={() => setCompose(true)}>
+              New email thread
+            </button>
+          </>
+        )}
         <select
-          aria-label="Start local conversation"
-          value=""
-          onChange={(e) => {
-            const contactId = e.target.value;
-            if (!contactId) return;
-            const existing = s.threads.find(
-              (t) => t.channel === channel && t.contactId === contactId,
-            );
-            if (existing) {
-              setSelected(existing.id);
-              return;
-            }
-            const id = uid();
-            if (
-              update((state) => ({
-                ...state,
-                threads: [
-                  ...state.threads,
-                  {
-                    id,
-                    contactId,
-                    channel,
-                    assignee: state.team[0]?.name || "Unassigned",
-                    status: "Open",
-                    draft: "",
-                  },
-                ],
-              }))
-            )
-              setSelected(id);
-          }}
+          aria-label="Conversation status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
         >
-          <option value="">Start local conversation</option>
-          {s.contacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
+          <option value="all">All conversations</option>
+          <option>Open</option>
+          <option>Closed</option>
         </select>
+        {channel !== "Email" && (
+          <select
+            aria-label="Start local conversation"
+            value=""
+            onChange={(e) => {
+              const contactId = e.target.value;
+              if (!contactId) return;
+              const existing = s.threads.find(
+                (t) => t.channel === channel && t.contactId === contactId,
+              );
+              if (existing) {
+                setSelected(existing.id);
+                return;
+              }
+              const id = uid();
+              if (
+                update((state) => ({
+                  ...state,
+                  threads: [
+                    ...state.threads,
+                    {
+                      id,
+                      contactId,
+                      channel,
+                      assignee: state.team[0]?.name || "Unassigned",
+                      status: "Open",
+                      draft: "",
+                    },
+                  ],
+                }))
+              )
+                setSelected(id);
+            }}
+          >
+            <option value="">Start local conversation</option>
+            {s.contacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="console-inbox">
         <aside aria-label="Conversations">
@@ -88,8 +139,16 @@ export default function Inbox({
               <strong>
                 {s.contacts.find((c) => c.id === t.contactId)?.name}
               </strong>
+              {channel === "Email" && (
+                <span className="console-thread-subject">
+                  {t.subject || "Earlier sample conversation"}
+                </span>
+              )}
               <small>
                 {t.status} · {t.assignee}
+                {channel === "Email"
+                  ? ` · ${senders.find((r) => r.id === t.mailboxId)?.name || "Unassigned"}`
+                  : ""}
               </small>
             </button>
           ))}
@@ -100,6 +159,17 @@ export default function Inbox({
               <div className="console-conversation-heading">
                 <div>
                   <h3>{contact.name}</h3>
+                  {channel === "Email" && (
+                    <>
+                      <p>{thread.subject || "Earlier sample conversation"}</p>
+                      <small>
+                        From:{" "}
+                        {senders.find((r) => r.id === thread.mailboxId)?.data
+                          .address || "Unassigned sample sender"}{" "}
+                        · Not connected
+                      </small>
+                    </>
+                  )}
                   <Badge>
                     {thread.status} ·{" "}
                     {contact.optedOut
@@ -149,33 +219,36 @@ export default function Inbox({
                 </button>
               </div>
               <div className="console-messages">
-                {s.messages
-                  .filter(
-                    (m) => m.contactId === contact.id && m.channel === channel,
-                  )
-                  .map((m) => (
-                    <article
-                      key={m.id}
-                      className={m.direction === "outbound" ? "outbound" : ""}
-                    >
-                      <Badge>
-                        {m.kind} · {m.direction}
-                      </Badge>
-                      <p>{m.body}</p>
-                      {m.attachments?.map((file) => (
-                        <a
-                          className="secondary"
-                          key={file.id}
-                          href={file.dataUrl}
-                          download={file.name}
-                        >
-                          Download local attachment: {file.name} (
-                          {Math.ceil(file.size / 1024)} KB)
-                        </a>
-                      ))}
-                      <small>{date(m.at)}</small>
-                    </article>
-                  ))}
+                {messagesForThread(s, thread).map((m) => (
+                  <article
+                    key={m.id}
+                    className={m.direction === "outbound" ? "outbound" : ""}
+                  >
+                    <Badge>
+                      {m.kind} · {m.direction}
+                    </Badge>
+                    {m.template ? (
+                      <TemplatePreview content={m.template} />
+                    ) : (
+                      <>
+                        {m.subject && <strong>{m.subject}</strong>}
+                        <p>{m.body}</p>
+                      </>
+                    )}
+                    {m.attachments?.map((file) => (
+                      <a
+                        className="secondary"
+                        key={file.id}
+                        href={file.dataUrl}
+                        download={file.name}
+                      >
+                        Download local attachment: {file.name} (
+                        {Math.ceil(file.size / 1024)} KB)
+                      </a>
+                    ))}
+                    <small>{date(m.at)}</small>
+                  </article>
+                ))}
               </div>
               <label>
                 Reply draft
@@ -312,49 +385,14 @@ export default function Inbox({
                     thread.status === "Closed"
                   }
                   onClick={() => {
-                    if (
-                      update((state) => {
-                        const body =
-                          state.threads
-                            .find((t) => t.id === thread.id)
-                            ?.draft.trim() || "";
-                        if (
-                          !body &&
-                          !state.threads.find((t) => t.id === thread.id)
-                            ?.attachments?.length
-                        )
-                          return state;
-                        return addActivity(
-                          {
-                            ...state,
-                            messages: [
-                              ...state.messages,
-                              {
-                                id: uid(),
-                                contactId: contact.id,
-                                channel,
-                                direction: "outbound",
-                                body,
-                                at: now(),
-                                kind: "Local draft",
-                                attachments:
-                                  state.threads.find((t) => t.id === thread.id)
-                                    ?.attachments || [],
-                              },
-                            ],
-                            threads: state.threads.map((t) =>
-                              t.id === thread.id
-                                ? { ...t, draft: "", attachments: [] }
-                                : t,
-                            ),
-                          },
-                          contact.id,
-                          "Reply saved locally; not sent",
-                          "local_reply",
+                    try {
+                      if (update((state) => saveThreadReply(state, thread.id)))
+                        notify(
+                          "Reply saved in this local conversation. No message sent.",
                         );
-                      })
-                    )
-                      notify("Reply saved locally. No message sent.");
+                    } catch (err) {
+                      notify((err as Error).message);
+                    }
                   }}
                 >
                   Save reply locally
@@ -369,6 +407,7 @@ export default function Inbox({
                           contact.id,
                           channel,
                           "Sample incoming reply: I am interested. Please have your team follow up.",
+                          thread.id,
                         ),
                       )
                     )
@@ -418,6 +457,81 @@ export default function Inbox({
           )}
         </div>
       </div>
+      {compose && (
+        <Modal title="New local email thread" close={() => setCompose(false)}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              try {
+                let id = "";
+                if (
+                  update((state) => {
+                    const created = createEmailThread(
+                      state,
+                      formValue(f, "contactId"),
+                      formValue(f, "senderId"),
+                      formValue(f, "subject"),
+                    );
+                    id = created.threadId;
+                    return created.state;
+                  })
+                ) {
+                  setSelected(id);
+                  setMailbox("all");
+                  setStatus("all");
+                  setQuery("");
+                  setCompose(false);
+                  notify("Local email conversation created");
+                }
+              } catch (err) {
+                notify((err as Error).message);
+              }
+            }}
+          >
+            <label>
+              Contact
+              <select name="contactId" required>
+                <option value="">Choose contact with email</option>
+                {s.contacts
+                  .filter((c) => c.email)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} · {c.email}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              Local sender draft
+              <select
+                name="senderId"
+                defaultValue={
+                  mailbox === "all" || mailbox === "unassigned" ? "" : mailbox
+                }
+              >
+                <option value="">Unassigned sample sender</option>
+                {senders
+                  .filter((r) => r.data.archived !== "true")
+                  .map((sender) => (
+                    <option key={sender.id} value={sender.id}>
+                      {sender.name} · {sender.data.address}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              Subject
+              <input name="subject" required maxLength={190} />
+            </label>
+            <p>
+              Creating a local thread does not send an email or connect a
+              mailbox.
+            </p>
+            <button className="primary">Create local thread</button>
+          </form>
+        </Modal>
+      )}
     </Panel>
   );
 }

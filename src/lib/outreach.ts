@@ -284,6 +284,7 @@ export function advanceSequence(
         channel: step.type,
         templateId: step.templateId,
         agentId: step.agentId,
+        senderId: step.senderId,
         contactIds: [c.id],
         status: "Draft",
         scheduledAt: "",

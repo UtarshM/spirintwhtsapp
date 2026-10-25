@@ -268,6 +268,29 @@ export default function Sequences({ notify }: { notify: (s: string) => void }) {
                       </select>
                     </label>
                   )}
+                  {step.type === "Email" && (
+                    <label>
+                      Local sender draft
+                      <select
+                        value={step.senderId || ""}
+                        onChange={(e) =>
+                          patch(step.id, { senderId: e.target.value })
+                        }
+                      >
+                        <option value="">Unassigned sample sender</option>
+                        {s.resources
+                          .filter(
+                            (r) =>
+                              r.kind === "sender" && r.data.archived !== "true",
+                          )
+                          .map((sender) => (
+                            <option key={sender.id} value={sender.id}>
+                              {sender.name} · {sender.data.address}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  )}
                   {step.type === "AI calling" && (
                     <label>
                       Voice agent

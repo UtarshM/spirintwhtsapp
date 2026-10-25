@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import TemplatePreview from "./template-preview";
 import { useWorkspace } from "../local-provider";
 import {
   uid,
@@ -7,6 +8,7 @@ import {
   eligibleContacts,
   validateCampaign,
   simulationRates,
+  personalizeTemplate,
   type Channel,
   type LocalCampaign,
 } from "@/lib/local-workspace";
@@ -23,12 +25,14 @@ export default function Campaigns({
   const [edit, setEdit] = useState<LocalCampaign | null | undefined>(),
     [detail, setDetail] = useState(""),
     [query, setQuery] = useState(""),
+    [statusFilter, setStatusFilter] = useState(""),
     [selected, setSelected] = useState<string[]>([]),
     [kind, setKind] = useState<Channel>(channel || "WhatsApp");
   const current = s.campaigns.find((c) => c.id === detail);
   const list = s.campaigns.filter(
     (c) =>
       (!channel || c.channel === channel) &&
+      (!statusFilter || c.status === statusFilter) &&
       c.name.toLowerCase().includes(query.toLowerCase()),
   );
   const open = (c: LocalCampaign | null) => {
@@ -62,6 +66,20 @@ export default function Campaigns({
         onChange={setQuery}
         placeholder="Search campaigns"
       />
+      <label>
+        Campaign status
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">All statuses</option>
+          {["Draft", "Scheduled", "Paused", "Cancelled", "Completed"].map(
+            (status) => (
+              <option key={status}>{status}</option>
+            ),
+          )}
+        </select>
+      </label>
       <div className="table-scroll">
         <table>
           <thead>
@@ -123,6 +141,8 @@ export default function Campaigns({
                 channel: kind,
                 templateId: formValue(f, "template"),
                 agentId: formValue(f, "agent"),
+                senderId:
+                  kind === "Email" ? formValue(f, "senderId") : undefined,
                 contactIds: selected,
                 status: scheduled ? "Scheduled" : "Draft",
                 scheduledAt: scheduled ? new Date(scheduled).toISOString() : "",
@@ -192,6 +212,23 @@ export default function Campaigns({
                     .map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
+            {kind === "Email" && (
+              <label>
+                Local sender draft
+                <select name="senderId" defaultValue={edit?.senderId || ""}>
+                  <option value="">Unassigned sample sender</option>
+                  {s.resources
+                    .filter(
+                      (r) => r.kind === "sender" && r.data.archived !== "true",
+                    )
+                    .map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} · {r.data.address}
                       </option>
                     ))}
                 </select>
@@ -399,6 +436,39 @@ export default function Campaigns({
               Duplicate
             </button>
           </div>
+          {current.channel === "Email" && (
+            <p>
+              Sender draft:{" "}
+              {s.resources.find((r) => r.id === current.senderId)?.name ||
+                "Unassigned sample sender"}{" "}
+              · Not connected
+            </p>
+          )}
+          {(() => {
+            const snapshot = s.messages.find(
+              (m) => m.campaignId === current.id && m.template,
+            )?.template;
+            const template = s.templates.find(
+              (t) => t.id === current.templateId,
+            );
+            const person = s.contacts.find((c) =>
+              current.contactIds.includes(c.id),
+            );
+            const content =
+              current.status === "Completed"
+                ? snapshot
+                : template && person
+                  ? personalizeTemplate(template, person)
+                  : template;
+            return content ? (
+              <section className="console-template-review">
+                <h3>
+                  {snapshot ? "Saved simulation content" : "Content preview"}
+                </h3>
+                <TemplatePreview content={content} />
+              </section>
+            ) : null;
+          })()}
           <h3 className="console-subtitle">Execution history</h3>
           {s.activities
             .filter((a) => a.campaignId === current.id)

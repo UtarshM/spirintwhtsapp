@@ -8,8 +8,19 @@ import {
   toCsv,
   type LocalContact,
 } from "@/lib/local-workspace";
-import { addActivity, audience, leadStatuses } from "@/lib/outreach";
-import { parseContactCsv } from "@/lib/csv";
+import {
+  addActivity,
+  audience,
+  leadStatuses,
+  type Resource,
+} from "@/lib/outreach";
+import {
+  parseContactCsv,
+  inspectContactCsv,
+  parseMappedContactCsv,
+  contactImportFields,
+  type ContactColumnMapping,
+} from "@/lib/csv";
 import {
   Panel,
   Empty,
@@ -46,7 +57,17 @@ export default function Contacts({
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
-  const [segmentModal, setSegmentModal] = useState(false);
+  const [segmentModal, setSegmentModal] = useState(false),
+    [editSegment, setEditSegment] = useState<Resource | null>(null),
+    [csvSource, setCsvSource] = useState(""),
+    [mapping, setMapping] = useState<ContactColumnMapping>({
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      consent: "",
+    });
+  const csv = csvSource ? inspectContactCsv(csvSource) : null;
   return (
     <>
       <Panel
@@ -60,7 +81,13 @@ export default function Contacts({
         description="Local sample contacts · Consent is never inferred from an import."
         action={
           <div className="console-actions">
-            <button className="secondary" onClick={() => setSegmentModal(true)}>
+            <button
+              className="secondary"
+              onClick={() => {
+                setEditSegment(null);
+                setSegmentModal(true);
+              }}
+            >
               New segment
             </button>
             <label className="secondary console-file">
@@ -73,9 +100,10 @@ export default function Contacts({
                     const file = e.target.files?.[0];
                     if (file) {
                       if (file.size > 2000000) throw Error("Maximum 2 MB");
-                      setPreview(
-                        parseContactCsv(await file.text(), s.contacts),
-                      );
+                      const source = await file.text();
+                      const inspected = inspectContactCsv(source);
+                      setMapping(inspected.mapping);
+                      setCsvSource(source);
                     }
                   } catch (err) {
                     notify((err as Error).message);
@@ -163,6 +191,15 @@ export default function Contacts({
                   <button
                     className="text-button"
                     onClick={() => {
+                      setEditSegment(r);
+                      setSegmentModal(true);
+                    }}
+                  >
+                    Edit segment
+                  </button>
+                  <button
+                    className="text-button"
+                    onClick={() => {
                       if (
                         update((current) => ({
                           ...current,
@@ -233,6 +270,77 @@ export default function Contacts({
         )}
         <p>{people.length} contacts · Local data only</p>
       </Panel>
+      {csv && (
+        <Modal title="Map CSV columns" close={() => setCsvSource("")}>
+          <p>
+            {csv.rows.length} source rows. Map your columns, then review
+            validation and duplicates before importing. Consent is recorded only
+            for an explicit true value.
+          </p>
+          <div className="console-form-grid">
+            {contactImportFields.map((field) => (
+              <label key={field}>
+                {field}
+                {field === "name" || field === "email"
+                  ? " (required)"
+                  : " (optional)"}
+                <select
+                  value={mapping[field]}
+                  onChange={(e) =>
+                    setMapping((current) => ({
+                      ...current,
+                      [field]: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Do not import</option>
+                  {csv.headers.map((header, i) => (
+                    <option key={i} value={String(i)}>
+                      {header || `Column ${i + 1}`} · Column {i + 1}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+          <h3>Source preview</h3>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  {csv.headers.map((h, i) => (
+                    <th key={i}>{h || `Column ${i + 1}`}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {csv.sample.map((row, i) => (
+                  <tr key={i}>
+                    {csv.headers.map((_, j) => (
+                      <td key={j}>{row[j] || "—"}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button
+            className="primary"
+            onClick={() => {
+              try {
+                setPreview(
+                  parseMappedContactCsv(csvSource, mapping, s.contacts),
+                );
+                setCsvSource("");
+              } catch (err) {
+                notify((err as Error).message);
+              }
+            }}
+          >
+            Review mapped import
+          </button>
+        </Modal>
+      )}
       {preview && (
         <Modal title="Review CSV import" close={() => setPreview(null)}>
           <p>
@@ -279,31 +387,35 @@ export default function Contacts({
       )}
       {segmentModal && (
         <Modal
-          title="Create audience segment"
+          title={
+            editSegment ? "Edit audience segment" : "Create audience segment"
+          }
           close={() => setSegmentModal(false)}
         >
           <form
             onSubmit={(e) => {
               e.preventDefault();
               const f = new FormData(e.currentTarget);
+              const resource: Resource = {
+                id: editSegment?.id || uid(),
+                kind: "segment",
+                name: formValue(f, "name"),
+                data: {
+                  query: formValue(f, "query"),
+                  tag: formValue(f, "tag"),
+                  stage: formValue(f, "stage"),
+                  consent: formValue(f, "consent"),
+                },
+                updatedAt: now(),
+              };
               if (
                 update((current) => ({
                   ...current,
-                  resources: [
-                    ...current.resources,
-                    {
-                      id: uid(),
-                      kind: "segment",
-                      name: formValue(f, "name"),
-                      data: {
-                        query: formValue(f, "query"),
-                        tag: formValue(f, "tag"),
-                        stage: formValue(f, "stage"),
-                        consent: formValue(f, "consent"),
-                      },
-                      updatedAt: now(),
-                    },
-                  ],
+                  resources: editSegment
+                    ? current.resources.map((r) =>
+                        r.id === resource.id ? resource : r,
+                      )
+                    : [...current.resources, resource],
                 }))
               ) {
                 setSegmentModal(false);
@@ -313,19 +425,32 @@ export default function Contacts({
           >
             <label>
               Segment name
-              <input name="name" required maxLength={120} />
+              <input
+                name="name"
+                required
+                maxLength={120}
+                defaultValue={editSegment?.name}
+              />
             </label>
             <label>
               Name, company or email contains
-              <input name="query" maxLength={100} />
+              <input
+                name="query"
+                maxLength={100}
+                defaultValue={editSegment?.data.query}
+              />
             </label>
             <label>
               Has tag
-              <input name="tag" maxLength={100} />
+              <input
+                name="tag"
+                maxLength={100}
+                defaultValue={editSegment?.data.tag}
+              />
             </label>
             <label>
               Lead status
-              <select name="stage">
+              <select name="stage" defaultValue={editSegment?.data.stage || ""}>
                 <option value="">Any</option>
                 {leadStatuses.map((status) => (
                   <option key={status}>{status}</option>
@@ -334,7 +459,10 @@ export default function Contacts({
             </label>
             <label>
               Require consent
-              <select name="consent">
+              <select
+                name="consent"
+                defaultValue={editSegment?.data.consent || ""}
+              >
                 <option value="">Any</option>
                 <option>Yes</option>
               </select>

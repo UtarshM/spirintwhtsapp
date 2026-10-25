@@ -19,7 +19,20 @@ export const localContactSchema = z.object({
   value: z.number().nonnegative().default(0),
   createdAt: timestamp.default(""),
 });
+export const templateButtonSchema = z.object({
+  text: z.string().trim().min(1).max(80),
+  url: z.string().max(2000),
+  kind: z.enum(["URL", "Quick reply", "Phone"]).optional(),
+});
+export const templateCardSchema = z.object({
+  id: identifier,
+  title: z.string().trim().min(1).max(120),
+  body: z.string().max(1000),
+  mediaUrl: z.string().max(2000),
+  buttons: z.array(templateButtonSchema).max(3),
+});
 const templateSchema = z.object({
+  cards: z.array(templateCardSchema).max(10).optional(),
   id: identifier,
   name: z.string().trim().min(1).max(200),
   channel: channelSchema,
@@ -31,14 +44,10 @@ const templateSchema = z.object({
     .enum(["Marketing", "Utility", "Authentication"])
     .default("Marketing"),
   mediaUrl: z.string().max(2000).default(""),
-  buttons: z
-    .array(
-      z.object({ text: z.string().min(1).max(80), url: z.string().max(2000) }),
-    )
-    .max(3)
-    .default([]),
+  buttons: z.array(templateButtonSchema).max(3).default([]),
 });
 const stepSchema = z.object({
+  senderId: z.string().optional(),
   id: identifier,
   type: z.enum([
     "WhatsApp",
@@ -61,6 +70,7 @@ const sequenceSchema = z.object({
   updatedAt: timestamp,
 });
 const campaignSchema = z.object({
+  senderId: z.string().optional(),
   id: identifier,
   name: z.string().trim().min(1).max(200),
   channel: channelSchema,
@@ -86,6 +96,11 @@ const attachmentSchema = z.object({
     ),
 });
 const messageSchema = z.object({
+  campaignId: z.string().optional(),
+  threadId: z.string().optional(),
+  senderId: z.string().optional(),
+  subject: z.string().max(220).optional(),
+  template: templateSchema.optional(),
   attachments: z.array(attachmentSchema).max(3).optional(),
   id: identifier,
   contactId: identifier,
@@ -96,6 +111,9 @@ const messageSchema = z.object({
   kind: z.enum(["Sample", "Local draft", "Simulation"]),
 });
 const threadSchema = z.object({
+  mailboxId: z.string().optional(),
+  subject: z.string().max(200).optional(),
+  campaignId: z.string().optional(),
   attachments: z.array(attachmentSchema).max(3).optional(),
   id: identifier,
   contactId: identifier,
@@ -391,6 +409,78 @@ export function personalize(body: string, contact: LocalContact) {
       })[key as "name"] || "",
   );
 }
+export function validateTemplateContent(template: LocalTemplate) {
+  const errors: string[] = [];
+  const supported = new Set(["first_name", "name", "company", "email"]);
+  const checkText = (value: string) => {
+    for (const match of value.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g))
+      if (!supported.has(match[1].trim()))
+        errors.push("Template contains unsupported variables.");
+  };
+  const checkUrl = (value: string) => {
+    if (!value) return;
+    try {
+      const url = new URL(value);
+      if (
+        !["https:", "http:"].includes(url.protocol) ||
+        url.username ||
+        url.password ||
+        url.host.includes("{")
+      )
+        throw Error();
+    } catch {
+      errors.push("Template URL must be http or https without credentials.");
+    }
+  };
+  const checkButtons = (buttons: LocalTemplate["buttons"]) =>
+    buttons.forEach((button) => {
+      checkText(button.text);
+      checkText(button.url);
+      if (button.kind === "Phone") {
+        if (!/^\+[1-9]\d{7,14}$/.test(button.url))
+          errors.push("Button phone number must use international format.");
+      } else if (button.kind !== "Quick reply") {
+        if (!button.url) errors.push("URL button needs a destination URL.");
+        else checkUrl(button.url);
+      }
+    });
+  checkText(template.subject);
+  checkText(template.body);
+  checkUrl(template.mediaUrl);
+  checkButtons(template.buttons);
+  template.cards?.forEach((card) => {
+    checkText(card.title);
+    checkText(card.body);
+    checkUrl(card.mediaUrl);
+    checkButtons(card.buttons);
+  });
+  return [...new Set(errors)];
+}
+export function personalizeTemplate(
+  template: LocalTemplate,
+  contact: LocalContact,
+): LocalTemplate {
+  return {
+    ...structuredClone(template),
+    subject: personalize(template.subject, contact),
+    body: personalize(template.body, contact),
+    buttons: template.buttons.map((button) => ({
+      ...button,
+      text: personalize(button.text, contact),
+      url: personalize(button.url, contact),
+    })),
+    cards: template.cards?.map((card) => ({
+      ...card,
+      title: personalize(card.title, contact),
+      body: personalize(card.body, contact),
+      buttons: card.buttons.map((button) => ({
+        ...button,
+        text: personalize(button.text, contact),
+        url: personalize(button.url, contact),
+      })),
+    })),
+  };
+}
 export function eligibleContacts(s: LocalWorkspace, c: LocalCampaign) {
   return s.contacts.filter(
     (p) =>
@@ -423,13 +513,18 @@ export function validateCampaign(s: LocalWorkspace, c: LocalCampaign) {
     );
     if (!t || t.status !== "Ready")
       errors.push("Choose a ready template for this channel.");
+    if (t) errors.push(...validateTemplateContent(t));
     if (
-      t &&
-      /\{\{\s*(?!first_name\s*\}\}|name\s*\}\}|company\s*\}\}|email\s*\}\})[^}]+\}\}/.test(
-        `${t.subject} ${t.body}`,
+      c.channel === "Email" &&
+      c.senderId &&
+      !s.resources.some(
+        (r) =>
+          r.id === c.senderId &&
+          r.kind === "sender" &&
+          r.data.archived !== "true",
       )
     )
-      errors.push("Template contains unsupported variables.");
+      errors.push("Select an available local sender draft.");
   }
   if (c.status === "Completed" || c.status === "Cancelled")
     errors.push(
@@ -458,7 +553,54 @@ export function simulateCampaign(
     );
   const at = now(),
     runId = uid();
-  const template = s.templates.find((t) => t.id === c.templateId);
+  const template =
+    c.channel === "AI calling"
+      ? undefined
+      : s.templates.find((t) => t.id === c.templateId);
+  const threads = [...s.threads];
+  const messages = [...s.messages];
+  if (template)
+    for (const contact of eligible) {
+      const snapshot = personalizeTemplate(template, contact);
+      let thread =
+        c.channel === "WhatsApp"
+          ? threads.find(
+              (t) => t.contactId === contact.id && t.channel === "WhatsApp",
+            )
+          : undefined;
+      if (!thread) {
+        thread = {
+          id: uid(),
+          contactId: contact.id,
+          channel: c.channel,
+          assignee: "Scalezix team",
+          status: "Open",
+          draft: "",
+          ...(c.channel === "Email"
+            ? {
+                mailboxId: c.senderId || "",
+                subject: snapshot.subject,
+                campaignId: c.id,
+              }
+            : {}),
+        };
+        threads.push(thread);
+      }
+      messages.push({
+        id: uid(),
+        contactId: contact.id,
+        channel: c.channel,
+        direction: "outbound",
+        body: snapshot.body,
+        subject: snapshot.subject,
+        threadId: thread.id,
+        senderId: c.senderId || "",
+        template: snapshot,
+        campaignId: c.id,
+        at,
+        kind: "Simulation",
+      });
+    }
   return {
     ...s,
     campaigns: s.campaigns.map((x) =>
@@ -486,38 +628,8 @@ export function simulateCampaign(
         channel: c.channel,
       })),
     ],
-    messages: template
-      ? [
-          ...s.messages,
-          ...eligible.map((p) => ({
-            id: uid(),
-            contactId: p.id,
-            channel: c.channel,
-            direction: "outbound" as const,
-            body: personalize(template.body, p),
-            at,
-            kind: "Simulation" as const,
-          })),
-        ]
-      : s.messages,
-    threads: [
-      ...s.threads,
-      ...eligible
-        .filter(
-          (p) =>
-            !s.threads.some(
-              (t) => t.contactId === p.id && t.channel === c.channel,
-            ),
-        )
-        .map((p) => ({
-          id: uid(),
-          contactId: p.id,
-          channel: c.channel,
-          assignee: "Scalezix team",
-          status: "Open" as const,
-          draft: "",
-        })),
-    ],
+    messages,
+    threads,
   };
 }
 export function recordIncoming(
@@ -525,8 +637,17 @@ export function recordIncoming(
   contactId: string,
   channel: Channel,
   body: string,
+  threadId?: string,
 ): LocalWorkspace {
   const at = now();
+  const target = threadId
+    ? s.threads.find((t) => t.id === threadId)
+    : s.threads.find((t) => t.contactId === contactId && t.channel === channel);
+  if (
+    threadId &&
+    (!target || target.contactId !== contactId || target.channel !== channel)
+  )
+    throw Error("Conversation does not match this contact and channel.");
   return {
     ...s,
     messages: [
@@ -539,10 +660,17 @@ export function recordIncoming(
         body,
         at,
         kind: "Simulation",
+        threadId: target?.id,
+        senderId: target?.mailboxId,
+        subject: target?.subject,
       },
     ],
     threads: s.threads.map((t) =>
-      t.contactId === contactId && t.channel === channel
+      (
+        target
+          ? t.id === target.id
+          : t.contactId === contactId && t.channel === channel
+      )
         ? { ...t, status: "Open" }
         : t,
     ),
@@ -576,6 +704,17 @@ export function validateSequence(s: LocalWorkspace, seq: LocalSequence) {
       )
         errors.push(`Step ${i + 1}: choose a ready ${step.type} template.`);
     }
+    if (
+      step.type === "Email" &&
+      step.senderId &&
+      !s.resources.some(
+        (r) =>
+          r.id === step.senderId &&
+          r.kind === "sender" &&
+          r.data.archived !== "true",
+      )
+    )
+      errors.push(`Step ${i + 1}: choose an available sender draft.`);
     if (
       step.type === "AI calling" &&
       !s.agents.some((a) => a.id === step.agentId)
@@ -638,6 +777,39 @@ export function validateBackup(input: unknown) {
     s.resources.some((r) => r.data.contactId && !ids.has(r.data.contactId))
   )
     throw new Error("Backup contains missing contact references");
+  const senderExists = (id: string | undefined) =>
+    !id || s.resources.some((r) => r.id === id && r.kind === "sender");
+  if (
+    s.campaigns.some((c) => !senderExists(c.senderId)) ||
+    s.threads.some((t) => !senderExists(t.mailboxId)) ||
+    s.messages.some((m) => !senderExists(m.senderId))
+  )
+    throw Error("Backup contains a missing sender reference");
+  if (
+    s.messages.some(
+      (m) =>
+        m.threadId &&
+        !s.threads.some(
+          (t) =>
+            t.id === m.threadId &&
+            t.contactId === m.contactId &&
+            t.channel === m.channel &&
+            (t.channel !== "Email" ||
+              (t.mailboxId || "") === (m.senderId || "")),
+        ),
+    )
+  )
+    throw Error("Backup contains an invalid conversation reference");
+  for (const template of [
+    ...s.templates,
+    ...s.messages.flatMap((message) =>
+      message.template ? [message.template] : [],
+    ),
+  ]) {
+    const errors = validateTemplateContent(template);
+    if (errors.some((e) => e.includes("URL") || e.includes("phone number")))
+      throw Error(errors.join(" "));
+  }
   if (balance(s) < 0) throw new Error("Backup has an invalid credit balance");
   for (const timezone of [s.settings.timezone])
     new Intl.DateTimeFormat("en", { timeZone: timezone });
