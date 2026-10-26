@@ -7,6 +7,7 @@ import {
   voiceAgentSchema,
   voiceConfiguration,
   voiceWindowsSchema,
+  voiceSpeechReady,
 } from "@/lib/voice";
 import {
   plivoRequest,
@@ -17,7 +18,7 @@ import { verifyPlivoCaller } from "@/lib/plivo-connection";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 const fields =
-  "id,contact_id,agent_id,status,duration_seconds,ai_runtime_seconds,runtime_usage_finalized,created_at,started_at,ended_at,last_error,outcome";
+  "id,contact_id,agent_id,status,duration_seconds,ai_runtime_seconds,runtime_usage_finalized,created_at,started_at,ended_at,last_error,outcome,ai_summary,ai_outcome,analysis_status,qualification_answers,handoff_summary";
 export async function GET(request: Request) {
   try {
     const { db, service, workspaceId, role } = await authorize(request);
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
         db
           .from("voice_agents")
           .select(
-            "id,name,language,instructions,knowledge,greeting,max_duration_seconds,max_concurrency,status",
+            "id,name,language,tts_provider,speaker,speech_pace,qualification_questions,end_call_rules,transfer_mode,instructions,knowledge,greeting,max_duration_seconds,max_concurrency,status",
           )
           .eq("workspace_id", workspaceId)
           .order("name"),
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
       if (!parsed.success)
         throw new ApiError(
           400,
-          "Check agent name, instructions, greeting, language and limits.",
+          "Check agent name, speech provider/voice/speed, questions, greeting and limits.",
         );
       const { id, ...agent } = parsed.data;
       const query = id
@@ -229,6 +230,8 @@ export async function POST(request: Request) {
     let config;
     try {
       config = await loadCallVoiceConfig(call.id);
+      if (!voiceSpeechReady(config, call.agent_snapshot))
+        throw Error("voice_speech_not_configured");
       await verifyPlivoCaller(config, call.caller_id);
     } catch {
       const { error: releaseError } = await service.rpc("reject_voice_call", {
@@ -242,7 +245,7 @@ export async function POST(request: Request) {
         );
       throw new ApiError(
         502,
-        "Your Plivo connection or calling number could not be verified. No call was placed.",
+        "Your Plivo connection, calling number or speech configuration could not be verified. No call was placed.",
       );
     }
     try {

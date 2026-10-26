@@ -433,7 +433,8 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
     );
   else if (
     page === "voice-connected" ||
-    (account && ["agents", "call-center", "call-logs"].includes(page))
+    (account &&
+      ["agents", "call-center", "call-logs", "transfers"].includes(page))
   )
     content = (
       <ConnectedVoice
@@ -446,7 +447,9 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
               ? "calls"
               : page === "call-logs"
                 ? "logs"
-                : "setup"
+                : page === "transfers"
+                  ? "transfers"
+                  : "setup"
         }
       />
     );

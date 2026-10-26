@@ -10,7 +10,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "worker:meta-events": "node --env-file=.env.local --import tsx services/worker/run-meta-events.ts",
     "voice:start": "node --env-file-if-exists=.env.local --import tsx services/voice/run.ts",
-    "voice:reconcile": "node --env-file-if-exists=.env.local --import tsx services/voice/reconcile.ts"
+    "voice:reconcile": "node --env-file-if-exists=.env.local --import tsx services/voice/reconcile.ts",
+    "voice:analyze": "node --env-file-if-exists=.env.local --import tsx services/voice/analysis.ts"
   },
   "dependencies": {
     "@aws-sdk/client-kms": "^3.900.0",

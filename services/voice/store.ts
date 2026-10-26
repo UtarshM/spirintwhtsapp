@@ -33,6 +33,9 @@ export type CallRecord = {
   ended_at: string | null;
   stop_requested_at?: string | null;
   outcome: string | null;
+  handoff_summary?: string | null;
+  handoff_token_hash?: string | null;
+  handoff_expires_at?: string | null;
 };
 export async function voiceRpc(name: string, args: object) {
   const { data, error } = await voiceDb().rpc(name, args);

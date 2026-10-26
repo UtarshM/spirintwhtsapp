@@ -1,5 +1,10 @@
 import type { VoiceAgent, VoiceConfig } from "../../src/lib/voice";
-import { replySchema, voicePrompt, wavToMulaw } from "../../src/lib/voice";
+import {
+  replySchema,
+  voicePrompt,
+  wavToMulaw,
+  voiceAgentSchema,
+} from "../../src/lib/voice";
 
 export class VoiceProviderError extends Error {
   constructor(
@@ -118,6 +123,8 @@ export async function cartesiaSpeech(
 ): Promise<Buffer> {
   if (!text.trim() || text.length > 350)
     throw new VoiceProviderError("speech_length_invalid");
+  if (!config.cartesiaKey || !config.englishVoice || !config.hindiVoice)
+    throw new VoiceProviderError("cartesia_not_configured");
   const response = await transport("https://api.cartesia.ai/tts/bytes", {
     method: "POST",
     headers: {
@@ -144,4 +151,87 @@ export async function cartesiaSpeech(
     throw new VoiceProviderError("cartesia_speech_failed");
   }
   return wavToMulaw(await boundedBody(response, 1_000_000));
+}
+
+/** Bulbul v3 raw 8 kHz mu-law: forward chunks without waiting for full synthesis. */
+export async function* sarvamSpeechStream(
+  config: VoiceConfig,
+  agent: VoiceAgent,
+  text: string,
+  signal: AbortSignal,
+  transport: typeof fetch = fetch,
+): AsyncGenerator<Buffer> {
+  if (!text.trim() || text.length > 350)
+    throw new VoiceProviderError("speech_length_invalid");
+  const parsed = voiceAgentSchema.parse(agent);
+  const response = await transport(
+    "https://api.sarvam.ai/text-to-speech/stream",
+    {
+      method: "POST",
+      headers: {
+        "api-subscription-key": config.sarvamKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text,
+        model: "bulbul:v3",
+        language_code: parsed.language === "hi" ? "hi-IN" : "en-IN",
+        speaker: parsed.speaker,
+        pace: parsed.speech_pace,
+        speech_sample_rate: 8000,
+        output_audio_codec: "mulaw",
+      }),
+      redirect: "error",
+      signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
+    },
+  );
+  const codec = response.headers
+    .get("content-type")
+    ?.split(";")[0]
+    .trim()
+    .toLowerCase();
+  if (
+    !response.ok ||
+    !response.body ||
+    ![
+      "audio/mulaw",
+      "audio/x-mulaw",
+      "audio/basic",
+      "application/octet-stream",
+    ].includes(codec || "")
+  ) {
+    await response.body?.cancel();
+    throw new VoiceProviderError("sarvam_speech_failed");
+  }
+  const reader = response.body.getReader();
+  let size = 0;
+  try {
+    for (;;) {
+      signal.throwIfAborted();
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.length;
+      if (size > 720000) throw new VoiceProviderError("speech_audio_too_large");
+      if (!size) continue;
+      const buffer = Buffer.from(value);
+      for (let offset = 0; offset < buffer.length; offset += 8000) {
+        signal.throwIfAborted();
+        yield buffer.subarray(offset, offset + 8000);
+      }
+    }
+    if (!size) throw new VoiceProviderError("speech_audio_empty");
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+}
+export async function voiceSpeech(
+  config: VoiceConfig,
+  language: "en" | "hi",
+  text: string,
+  signal: AbortSignal,
+  agent: VoiceAgent,
+): Promise<Buffer | AsyncIterable<Buffer>> {
+  if (agent.tts_provider === "sarvam")
+    return sarvamSpeechStream(config, agent, text, signal);
+  return cartesiaSpeech(config, language, text, signal);
 }

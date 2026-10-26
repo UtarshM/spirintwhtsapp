@@ -4,6 +4,7 @@ import type { AccountIdentity } from "@/lib/workspace-document";
 import type { VoiceAgent } from "@/lib/voice";
 import { Badge, Empty, Panel, date, download } from "./ui";
 import PlivoConnection from "./plivo-connection";
+import { bulbulSpeakers } from "@/lib/voice-options";
 type Call = {
   id: string;
   contact_id: string;
@@ -17,6 +18,11 @@ type Call = {
   ended_at: string | null;
   last_error: string | null;
   outcome: string | null;
+  ai_summary: string | null;
+  ai_outcome: string | null;
+  analysis_status: string;
+  handoff_summary: string | null;
+  qualification_answers: { question: string; answer: string | null }[];
 };
 type Turn = {
   id: string;
@@ -58,6 +64,12 @@ type Data = {
 const initial: VoiceAgent = {
   name: "",
   language: "en",
+  tts_provider: "sarvam",
+  speaker: "shubh",
+  speech_pace: 1,
+  qualification_questions: [],
+  end_call_rules: "",
+  transfer_mode: "warm",
   instructions: "",
   knowledge: "",
   greeting: "Hello, I am your AI assistant. Is now a good time to talk?",
@@ -70,7 +82,7 @@ export default function ConnectedVoice({
   view = "setup",
 }: {
   account?: AccountIdentity;
-  view?: "setup" | "agents" | "calls" | "logs" | "overview";
+  view?: "setup" | "agents" | "calls" | "logs" | "overview" | "transfers";
 }) {
   const [data, setData] = useState<Data>(),
     [error, setError] = useState(""),
@@ -81,7 +93,8 @@ export default function ConnectedVoice({
     [agentId, setAgentId] = useState(""),
     [contactId, setContactId] = useState("");
   const [turns, setTurns] = useState<Turn[]>(),
-    [selectedCall, setSelectedCall] = useState("");
+    [selectedCall, setSelectedCall] = useState(""),
+    [callDetails, setCallDetails] = useState<Call>();
   const intent = useRef<{ key: string; agent: string; contact: string } | null>(
     null,
   );
@@ -154,7 +167,15 @@ export default function ConnectedVoice({
     setError("");
     setMessage("");
     try {
-      await post("/api/voice", { action: "agent", agent });
+      await post("/api/voice", {
+        action: "agent",
+        agent: {
+          ...agent,
+          qualification_questions: (agent.qualification_questions || [])
+            .map((q) => q.trim())
+            .filter(Boolean),
+        },
+      });
       setAgent(initial);
       setMessage("Agent saved to this account.");
       setRevision((v) => v + 1);
@@ -203,6 +224,7 @@ export default function ConnectedVoice({
     const workspace = account!.workspaceId;
     setError("");
     setTurns(undefined);
+    setCallDetails(undefined);
     setSelectedCall(id);
     try {
       const response = await fetch(`/api/voice/${id}`, {
@@ -215,8 +237,10 @@ export default function ConnectedVoice({
       if (
         identity.current === workspace &&
         generation === transcriptRequest.current
-      )
+      ) {
         setTurns(result.turns);
+        setCallDetails(result.call);
+      }
     } catch (e) {
       if (
         identity.current === workspace &&
@@ -241,6 +265,13 @@ export default function ConnectedVoice({
         </p>
       </Panel>
     );
+  const visibleCalls =
+    view === "transfers"
+      ? data?.calls.filter(
+          (call) =>
+            call.outcome === "transfer_requested" || call.handoff_summary,
+        ) || []
+      : data?.calls || [];
   return (
     <>
       {error && (
@@ -456,7 +487,10 @@ export default function ConnectedVoice({
                 <h3>{a.name}</h3>
                 <p>
                   {a.language === "hi" ? "Hindi" : "English"} · Up to{" "}
-                  {a.max_duration_seconds}s · {a.max_concurrency} concurrent
+                  {a.max_duration_seconds}s · {a.max_concurrency} concurrent ·{" "}
+                  {a.tts_provider === "sarvam"
+                    ? `Sarvam · ${a.speaker} · ${a.speech_pace}×`
+                    : "Cartesia"}
                 </p>
                 <button
                   className="secondary"
@@ -496,6 +530,64 @@ export default function ConnectedVoice({
               </select>
             </label>
             <label>
+              Speech provider
+              <select
+                value={agent.tts_provider || "cartesia"}
+                onChange={(e) =>
+                  setAgent({
+                    ...agent,
+                    tts_provider: e.target.value as "sarvam" | "cartesia",
+                    speech_pace: 1,
+                  })
+                }
+              >
+                <option value="sarvam">Sarvam Bulbul · Indian voices</option>
+                <option value="cartesia">
+                  Cartesia · configured workspace voices
+                </option>
+              </select>
+            </label>
+            {agent.tts_provider === "sarvam" && (
+              <>
+                <label>
+                  Voice
+                  <select
+                    value={agent.speaker || "shubh"}
+                    onChange={(e) =>
+                      setAgent({
+                        ...agent,
+                        speaker: e.target
+                          .value as (typeof bulbulSpeakers)[number],
+                      })
+                    }
+                  >
+                    {bulbulSpeakers.map((speaker) => (
+                      <option key={speaker} value={speaker}>
+                        {speaker.charAt(0).toUpperCase() + speaker.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Speaking speed ({agent.speech_pace || 1}×)
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={agent.speech_pace || 1}
+                    onChange={(e) =>
+                      setAgent({
+                        ...agent,
+                        speech_pace: Number(e.target.value),
+                      })
+                    }
+                  />
+                  <small>0.5× slower · 1× natural · 2× faster</small>
+                </label>
+              </>
+            )}
+            <label>
               Opening message
               <textarea
                 required
@@ -521,6 +613,54 @@ export default function ConnectedVoice({
                   setAgent({ ...agent, instructions: e.target.value })
                 }
               />
+            </label>
+            <label>
+              Qualification questions (one per line)
+              <textarea
+                maxLength={2400}
+                value={(agent.qualification_questions || []).join("\n")}
+                onChange={(e) =>
+                  setAgent({
+                    ...agent,
+                    qualification_questions: e.target.value.split("\n"),
+                  })
+                }
+              />
+              <small>
+                Up to 10 questions, 240 characters each. Blank lines are ignored
+                on save.
+              </small>
+            </label>
+            <label>
+              When to end the call
+              <textarea
+                maxLength={2000}
+                value={agent.end_call_rules || ""}
+                onChange={(e) =>
+                  setAgent({ ...agent, end_call_rules: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Human handoff
+              <select
+                value={agent.transfer_mode || "warm"}
+                onChange={(e) =>
+                  setAgent({
+                    ...agent,
+                    transfer_mode: e.target.value as "warm" | "cold",
+                  })
+                }
+              >
+                <option value="warm">
+                  Warm · summary first, press 1 to accept
+                </option>
+                <option value="cold">Direct transfer</option>
+              </select>
+              <small>
+                Uses the human number in your Plivo connection settings. A live
+                handoff is still subject to provider acceptance.
+              </small>
             </label>
             <label>
               Business knowledge
@@ -665,11 +805,21 @@ export default function ConnectedVoice({
       )}
       {data && (
         <Panel
-          title="Provider call history"
-          description="Actual account records. Transcripts contain recognized speech and generated responses; interrupted responses are marked."
+          title={
+            view === "transfers" ? "Human handoffs" : "Provider call history"
+          }
+          description={
+            view === "transfers"
+              ? "Requested handoffs from the latest 100 account calls. A request does not confirm that a teammate accepted. Open the transcript to review the handoff summary."
+              : "Actual account records. Transcripts contain recognized speech and generated responses; interrupted responses are marked."
+          }
         >
-          {!data.calls.length ? (
-            <Empty>No provider calls recorded.</Empty>
+          {!visibleCalls.length ? (
+            <Empty>
+              {view === "transfers"
+                ? "No handoffs recorded."
+                : "No provider calls recorded."}
+            </Empty>
           ) : (
             <div className="console-table-wrap">
               <table>
@@ -684,7 +834,7 @@ export default function ConnectedVoice({
                   </tr>
                 </thead>
                 <tbody>
-                  {data.calls.map((c) => (
+                  {visibleCalls.map((c) => (
                     <tr key={c.id}>
                       <td>
                         {data.contacts.find((p) => p.id === c.contact_id)
@@ -694,6 +844,9 @@ export default function ConnectedVoice({
                       <td>
                         <Badge>{c.status}</Badge>
                         {c.outcome && <p>{c.outcome.replaceAll("_", " ")}</p>}
+                        {c.ai_outcome && (
+                          <p>AI outcome: {c.ai_outcome.replaceAll("_", " ")}</p>
+                        )}
                         {c.last_error && <p>Review required</p>}
                       </td>
                       <td>{c.duration_seconds}s</td>
@@ -739,6 +892,40 @@ export default function ConnectedVoice({
           )}
           {selectedCall && turns && (
             <div>
+              {callDetails && (
+                <>
+                  <h3>AI call review</h3>
+                  <p>
+                    <Badge>
+                      {callDetails.analysis_status.replaceAll("_", " ")}
+                    </Badge>
+                    {callDetails.ai_outcome &&
+                      ` · ${callDetails.ai_outcome.replaceAll("_", " ")}`}
+                  </p>
+                  <p>
+                    {callDetails.ai_summary ||
+                      (callDetails.analysis_status === "failed"
+                        ? "Analysis could not be completed and needs operator review."
+                        : "A summary is not available yet. Refresh the call after analysis runs.")}
+                  </p>
+                  {callDetails.qualification_answers?.map((item, i) => (
+                    <p key={i}>
+                      <strong>{item.question}</strong>
+                      <br />
+                      {item.answer || "Not answered"}
+                    </p>
+                  ))}
+                  {callDetails.handoff_summary && (
+                    <p>
+                      <strong>Summary provided for handoff:</strong>{" "}
+                      {callDetails.handoff_summary}
+                    </p>
+                  )}
+                  <small>
+                    AI-generated review. Check the transcript before acting.
+                  </small>
+                </>
+              )}
               <h3>Call transcript</h3>
               {!turns.length && <p>No transcript turns recorded.</p>}
               {turns.map((t) => (

@@ -14,6 +14,7 @@ import {
   replySchema,
   voiceWindowsSchema,
   type VoiceConfig,
+  type VoiceAgent,
 } from "../src/lib/voice";
 import {
   cartesiaSpeech,
@@ -52,6 +53,7 @@ const call: CallRecord = {
   outcome: null,
   agent_snapshot: {
     name: "Test",
+    transfer_mode: "cold",
     language: "hi",
     instructions: "Qualify politely and stop when asked.",
     knowledge: "Business hours 9 to 5.",
@@ -326,7 +328,10 @@ class Socket extends EventEmitter {
   }
 }
 const tick = () => new Promise((resolve) => setImmediate(resolve));
-function harness(overrides: Partial<VoiceSessionDependencies> = {}) {
+function harness(
+  overrides: Partial<VoiceSessionDependencies> = {},
+  agentOverrides: Partial<VoiceAgent> = {},
+) {
   const socket = new Socket(),
     stt = new Socket(),
     turns: { role: string; content: string }[] = [],
@@ -361,7 +366,11 @@ function harness(overrides: Partial<VoiceSessionDependencies> = {}) {
   };
   const session = attachVoiceSession(
     socket as unknown as WebSocket,
-    { ...call, started_at: new Date().toISOString() },
+    {
+      ...call,
+      agent_snapshot: { ...call.agent_snapshot, ...agentOverrides },
+      started_at: new Date().toISOString(),
+    },
     config,
     deps,
   );
@@ -559,4 +568,78 @@ test("meter persistence failure holds settlement but still terminates audio and 
   assert.ok(h.errors.includes("voice_runtime_usage_requires_reconciliation"));
   assert.ok(h.commands.some((c) => c.startsWith("DELETE")));
   assert.equal(h.socket.readyState, WebSocket.CLOSED);
+});
+
+test("warm handoff finalizes AI metering, saves summary, then redirects with a private confirmation capability", async () => {
+  const steps: string[] = [];
+  const token = "a".repeat(43);
+  const h = harness(
+    {
+      finalizeUsage: async () => {
+        steps.push("meter");
+      },
+      transferRequested: async () => {
+        steps.push("summary");
+        return token;
+      },
+      command: async (_config, _path, method, payload) => {
+        steps.push(method);
+        assert.equal(
+          (payload as { aleg_url: string }).aleg_url,
+          `https://voice.example.com/plivo/transfer/${call.id}?handoff=${token}`,
+        );
+        return {};
+      },
+    },
+    { transfer_mode: "warm" },
+  );
+  h.start();
+  await tick();
+  h.socket.receive({
+    event: "dtmf",
+    streamId: call.request_uuid,
+    dtmf: { digit: "0" },
+  });
+  await tick();
+  await tick();
+  assert.deepEqual(steps, ["meter", "summary", "POST"]);
+  assert.equal(h.socket.readyState, WebSocket.CLOSED);
+});
+test("a missing warm handoff summary/capability ends the call without silently downgrading to cold transfer", async () => {
+  const h = harness({}, { transfer_mode: "warm" });
+  h.start();
+  await tick();
+  h.socket.receive({
+    event: "dtmf",
+    streamId: call.request_uuid,
+    dtmf: { digit: "0" },
+  });
+  await tick();
+  await tick();
+  assert.ok(h.commands.some((c) => c.startsWith("DELETE")));
+  assert.ok(!h.commands.some((c) => c.startsWith("POST")));
+});
+test("streamed speech plays before synthesis completes and barge-in prevents later chunks/checkpoints", async () => {
+  let resume: () => void = () => {};
+  const h = harness({
+    speech: async () =>
+      (async function* () {
+        yield Buffer.alloc(160, 1);
+        await new Promise<void>((resolve) => {
+          resume = resolve;
+        });
+        yield Buffer.alloc(160, 2);
+      })(),
+  });
+  h.start();
+  await tick();
+  assert.equal(h.socket.sent.filter((e) => e.event === "playAudio").length, 1);
+  assert.equal(h.socket.sent.filter((e) => e.event === "checkpoint").length, 0);
+  h.stt.receive({ event: "vad.speech_start" });
+  resume();
+  await tick();
+  assert.equal(h.socket.sent.filter((e) => e.event === "playAudio").length, 1);
+  assert.equal(h.socket.sent.filter((e) => e.event === "checkpoint").length, 0);
+  assert.equal(h.interrupted.length, 1);
+  await h.session.stop();
 });

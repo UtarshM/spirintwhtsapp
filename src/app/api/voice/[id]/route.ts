@@ -15,7 +15,9 @@ export async function GET(
       throw new ApiError(400, "Invalid call.");
     const { data: call, error } = await service
       .from("calls")
-      .select("id,status,duration_seconds,created_at,last_error,outcome")
+      .select(
+        "id,status,duration_seconds,created_at,last_error,outcome,ai_summary,ai_outcome,analysis_status,qualification_answers,handoff_summary",
+      )
       .eq("workspace_id", workspaceId)
       .eq("id", id)
       .single();

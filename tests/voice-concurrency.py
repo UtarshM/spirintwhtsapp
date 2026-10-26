@@ -55,3 +55,14 @@ with ThreadPoolExecutor(max_workers=2) as pool:
 assert sum(r.returncode == 0 for r in claims) == 1, [r.stderr for r in claims]
 assert any('invalid_voice_session' in r.stderr for r in claims)
 print('PASS: concurrent call launches reserve once, only one launch owns the dial capability, limits hold and only one stream can claim a session')
+
+# A finished call queues one analysis job; simultaneous workers cannot lease it twice.
+finished = sql(f"select record_voice_runtime_end('{call_id}'); select finish_voice_call('{call_id}','{provider}',1,'completed')")
+assert finished.returncode == 0, finished.stderr
+def analysis_claim(_):
+    return sql("begin; select call_id from claim_voice_analyses(1); select pg_sleep(0.15); commit")
+with ThreadPoolExecutor(max_workers=2) as pool:
+    leases = list(pool.map(analysis_claim, [1, 2]))
+assert all(r.returncode == 0 for r in leases), [r.stderr for r in leases]
+assert sum(call_id in r.stdout for r in leases) == 1, [r.stdout for r in leases]
+print('PASS: simultaneous analysis workers lease each completed call exactly once')

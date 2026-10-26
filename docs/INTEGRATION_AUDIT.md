@@ -78,3 +78,10 @@ This follow-up still needs real credential/owned-number validation, wrong-accoun
 
 
 Platform AI billing now uses a service-finalized stream meter, independent of customer-signed callback durations. Hangup and reconciliation read terminal CDRs directly from Plivo and validate call identity/numbers. Missing runtime finalization holds the reservation for manual review; unclaimed calls incur zero AI credits. Local tests cover these boundaries, but deployed restart recovery, real provider invoices and commercial acceptance remain unverified.
+
+
+## Product PRD alignment — 26 October 2026
+
+The user confirmed the supplied PRD is the product requirements, including its missing features. [PRD_IMPLEMENTATION.md](PRD_IMPLEMENTATION.md) tracks the full scope without confusing saved planning screens with live integrations. This pass adds direct progressive Sarvam Bulbul v3 output, per-agent Sarvam voice/speed and questions/end rules, assisted warm handoff with an English summary whisper plus press-1 confirmation, durable post-call summaries/outcomes/answers, and immediate transactional suppression when real caller speech is saved. Existing Cartesia agents and explicit direct transfer remain supported. The previous voice row's absence of these features is superseded; recordings, reusable scripts, voice preview, bulk/sequence execution, additional language acceptance, calendar tools and live provider acceptance remain open.
+
+Analysis uses a private Supabase queue with leases, bounded retries and failed states. An empty/no-caller transcript gets a deterministic result without an LLM request; AI classifications do not change provider status, opt-out, billing or consent. Analysis writes `voice.analyzed`/`lead.hot` activity, not delivered external notifications. A scheduled analysis task is still required. Migration 0007 invalidates prior voice acceptance because streaming and handoff behavior changed. The other channel rows remain open; complete PRD parity is not claimed.

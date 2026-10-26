@@ -1,13 +1,15 @@
 import { randomUUID } from "node:crypto";
+import { prepareHandoff } from "./handoff";
 import WebSocket from "ws";
 import { z } from "zod";
 import {
   sarvamSttUrl,
   type VoiceConfig,
   type VoiceReply,
+  type VoiceAgent,
 } from "../../src/lib/voice";
 import {
-  cartesiaSpeech,
+  voiceSpeech,
   sarvamReply,
   plivoRequest,
   type ChatTurn,
@@ -22,7 +24,13 @@ import {
 } from "./store";
 
 export type VoiceSessionDependencies = {
-  speech: typeof cartesiaSpeech;
+  speech: (
+    config: VoiceConfig,
+    language: "en" | "hi",
+    text: string,
+    signal: AbortSignal,
+    agent: VoiceAgent,
+  ) => Promise<Buffer | AsyncIterable<Buffer>>;
   reply: typeof sarvamReply;
   record: typeof saveTurn;
   command: typeof plivoRequest;
@@ -31,11 +39,14 @@ export type VoiceSessionDependencies = {
   healthy: (call: CallRecord) => Promise<boolean>;
   markError: (call: CallRecord, code: string) => Promise<void>;
   interrupted: (call: CallRecord, key: string) => Promise<void>;
-  transferRequested: (call: CallRecord) => Promise<void>;
+  transferRequested: (
+    call: CallRecord,
+    config: VoiceConfig,
+  ) => Promise<string | void>;
   finalizeUsage: (call: CallRecord) => Promise<void>;
 };
 const defaults: VoiceSessionDependencies = {
-  speech: cartesiaSpeech,
+  speech: voiceSpeech,
   reply: sarvamReply,
   record: saveTurn,
   command: plivoRequest,
@@ -80,13 +91,7 @@ const defaults: VoiceSessionDependencies = {
       .eq("turn_key", key);
     if (error) throw Error("voice_transcript_save_failed");
   },
-  transferRequested: async (call) => {
-    const { error } = await voiceDb()
-      .from("calls")
-      .update({ outcome: "transfer_requested" })
-      .eq("id", call.id);
-    if (error) throw Error("handoff_save_failed");
-  },
+  transferRequested: prepareHandoff,
 };
 const startSchema = z.object({
   event: z.literal("start"),
@@ -175,11 +180,13 @@ export function attachVoiceSession(
     if (action === "handoff" && call.transfer_number) {
       transferring = true;
       try {
-        await deps.transferRequested(call);
         await cleanup();
+        const handoffToken = await deps.transferRequested(call, config);
+        if (agent.transfer_mode === "warm" && !handoffToken)
+          throw Error("handoff_confirmation_required");
         await deps.command(config, `Call/${call.provider_id}/`, "POST", {
           legs: "aleg",
-          aleg_url: `${config.publicUrl}/plivo/transfer/${call.id}`,
+          aleg_url: `${config.publicUrl}/plivo/transfer/${call.id}${handoffToken ? `?handoff=${handoffToken}` : ""}`,
           aleg_method: "POST",
         });
         ws.close(1000, "Transferring to team");
@@ -242,7 +249,13 @@ export function attachVoiceSession(
   ) {
     const signal = controller.signal,
       key = randomUUID();
-    const audio = await deps.speech(config, agent.language, speech, signal);
+    const audio = await deps.speech(
+      config,
+      agent.language,
+      speech,
+      signal,
+      agent,
+    );
     if (closed || generation !== epoch) return;
     await deps.record(call, key, "assistant", speech);
     if (closed || generation !== epoch) {
@@ -250,15 +263,21 @@ export function attachVoiceSession(
       return;
     }
     history.push({ role: "assistant", content: speech });
-    for (let i = 0; i < audio.length; i += 8000)
-      send({
-        event: "playAudio",
-        media: {
-          contentType: "audio/x-mulaw",
-          sampleRate: 8000,
-          payload: audio.subarray(i, i + 8000).toString("base64"),
-        },
-      });
+    const chunks = Buffer.isBuffer(audio) ? [audio] : audio;
+    pending = { name: `turn-${generation}-${key}`, action, key };
+    for await (const chunk of chunks) {
+      if (closed || generation !== epoch) return;
+      for (let i = 0; i < chunk.length; i += 8000)
+        send({
+          event: "playAudio",
+          media: {
+            contentType: "audio/x-mulaw",
+            sampleRate: 8000,
+            payload: chunk.subarray(i, i + 8000).toString("base64"),
+          },
+        });
+    }
+    if (closed || generation !== epoch) return;
     pending = { name: `turn-${generation}-${key}`, action, key };
     send({ event: "checkpoint", streamId: stream, name: pending.name });
     resetSilence();

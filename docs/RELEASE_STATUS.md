@@ -1,5 +1,7 @@
 # Release status
 
+Current product requirements are tracked in [PRD_IMPLEMENTATION.md](PRD_IMPLEMENTATION.md). Milestone entries below retain their original verification context; later corrections supersede earlier implementation gaps.
+
 ## Verified locally
 
 - TypeScript strict checks and optimized Next.js build.
@@ -154,3 +156,18 @@ This correction supersedes the earlier provider-duration platform billing model.
 All 77 unit tests passed, including read-only account/owned-number verification, bounded pagination and response sizes, sanitized errors, KMS encryption context, tenant/account mismatch rejection, per-call reconciliation routing, CDR number binding and runtime-meter termination behavior. All six exact migrations applied from scratch in a disposable local PostgreSQL database, followed by all tenant/accounting/draft/Meta/voice/Plivo SQL regressions. These include browser credential/RPC denial, immutable call binding, active-call rotation/disconnect blocks, acceptance invalidation, token erasure, callback-duration independence and zero-AI unanswered calls. Concurrent reservation, draft save, first-contact ingestion, launch and one-time media claim tests passed. The optimized Next.js build and strict TypeScript check passed; the voice Terraform configuration validated locally. These are local results, not hosted Supabase, KMS or provider acceptance. No live account connection, call, charge, cloud resource or acceptance evidence was created.
 
 Local preview smoke checks also passed: pricing/login returned 200, unconfigured Plivo/voice APIs returned 503 and a cross-origin Plivo mutation returned 403. The authenticated connection form still requires hosted Supabase/MFA and KMS acceptance; it has not been exercised with customer credentials.
+
+
+## PRD voice implementation — 26 October 2026
+
+Implemented the supplied product PRD's Sarvam output path using direct Bulbul v3 HTTP streaming at 8 kHz mu-law, with progressive Plivo playback and cancellation of in-flight synthesis on interruption. The authenticated agent builder persists Sarvam voice/speed, qualification questions, end rules and warm/direct transfer choice. New builder agents use Sarvam; existing agents retain Cartesia. Cartesia secrets are optional unless that agent's call needs them; AWS task injection now follows `cartesia_enabled`. A full short JSON LLM response is still required before synthesis, and one-second latency/real voice quality are not measured.
+
+Warm handoff code closes the AI meter, prepares/persists a bounded English summary and redirects to Plivo Dial with a protected summary whisper and press-1 acceptance before bridging. Signed callbacks, expiring hashed capabilities, stop/consent checks, bounded remaining duration and escaped XML guard this path. A missing summary/capability or failed preparation terminates the call rather than silently downgrading. It is an assisted telephone handoff, not conference supervision, and actual prompt/DTMF/bridging/B-leg behavior needs provider acceptance.
+
+Completed calls now queue durable analysis jobs. The server-only worker requires enabled workspace settings and unexpired voice acceptance before leasing provider work, and uses leases, expiry recovery, bounded backoff and five attempts; it validates summary/outcome/question answers, retains failure states and isolates failures between jobs. Calls without caller speech use deterministic results without a model request. AI results appear in call details and emit analysis/hot-lead events, without modifying provider status/opt-out/consent/billing or sending external alerts. Saving a real user transcript turn transactionally stops active enrollments and pending/queued outreach in that workspace.
+
+Validation: 85 unit tests passed; all seven exact migrations and all existing/new SQL regressions passed in a fresh disposable database. New checks cover agent snapshots, voice reply suppression and workspace boundaries, question/answer validation, analysis lease replay/expiry/backoff/exhaustion, hot-lead event replay, and denied browser job/RPC access. Concurrent credit reservations, draft saves, inbound contact normalization, call launches/media claims and analysis leases passed. Strict TypeScript and optimized build passed. The updated voice Terraform configuration validated locally. Disabled analysis startup was smoke-tested without credentials. No real account, AI request, call, transfer, payment, DNS or AWS resource was created; Docker execution, hosted Supabase/KMS and all live acceptance remain unverified.
+
+Migration 0007 removes stale voice acceptance and disables workspace calling. A hosted scheduler for `npm run voice:analyze` is still required. Full PRD completion—including official WhatsApp outbound/onboarding/templates, email synchronization, a durable multichannel executor, lead connectors, recordings/bulk/scripts/preview, booking, Shopify, billing and deployment/operations—remains open in the tracker.
+
+Final local page checks passed for pricing, login and the unconfigured account boundary; voice API reads returned 503 and cross-origin launch returned 403. The account Transfers menu now reads normalized handoff requests/summaries and explicitly avoids reporting unverified acceptance. Hosted authenticated UI and provider calls remain untested.

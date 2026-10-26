@@ -1,0 +1,75 @@
+\set ON_ERROR_STOP on
+begin;
+insert into auth.users(id,email) values('11111111-1111-4111-8111-111111111111','voice-prd@example.com');
+insert into workspaces(id,name,timezone) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Voice PRD','UTC');
+insert into memberships values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','owner');
+insert into wallets(workspace_id,balance) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',1000);
+insert into contacts(id,workspace_id,name,phone,consent) values('cccccccc-cccc-4ccc-8ccc-cccccccccccc','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Caller','+919876543210',true);
+insert into voice_agents(id,workspace_id,name,language,instructions,max_duration_seconds,status,tts_provider,speaker,speech_pace,qualification_questions,end_call_rules) values('dddddddd-dddd-4ddd-8ddd-dddddddddddd','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Agent','en','Help the caller',180,'ready','sarvam','ritu',1.2,'["What is your budget?"]','End when the caller is done.');
+select connect_plivo_account('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','99999999-9999-4999-8999-999999999999','MAPRDTESTFIXTURE',repeat('x',32),'[{"number":"+12025550123"}]','+12025550123');
+insert into integration_acceptances(workspace_id,channel,evidence,expires_at) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','voice','Disposable PRD regression fixture',now()+interval '1 hour');
+update voice_settings set allowed_destinations='{+919876543210}',enabled=true where workspace_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+insert into sending_windows(workspace_id,channel,weekday,start_time,end_time,enabled) select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','voice',day,'00:00','23:59:59',true from generate_series(0,6) day;
+insert into credit_rates(channel,unit,rate_microcredits,effective_at,approved) values('voice','minute',100,now(),true);
+insert into workspaces(id,name) values('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Other workspace');
+insert into sequences(id,workspace_id,name) values('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','Voice reply stop');
+insert into enrollments(workspace_id,sequence_id,contact_id,next_run_at) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','cccccccc-cccc-4ccc-8ccc-cccccccccccc',now());
+insert into outbox(workspace_id,contact_id,kind,payload,idempotency_key) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','cccccccc-cccc-4ccc-8ccc-cccccccccccc','message','{}','voice-reply-test'),('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',null,'message','{}','other-workspace-test');
+create function pg_temp.make_call() returns calls language sql as $$select prepare_voice_call('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','dddddddd-dddd-4ddd-8ddd-dddddddddddd','cccccccc-cccc-4ccc-8ccc-cccccccccccc',gen_random_uuid(),repeat('a',64))$$;
+create function pg_temp.expect_error(q text,expected text) returns void language plpgsql as $$begin begin execute q; raise exception 'expected failure'; exception when raise_exception then if sqlerrm<>expected then raise; end if; end; end $$;
+do $$declare ca calls; j voice_analysis_jobs; j2 voice_analysis_jobs; provider text:=gen_random_uuid()::text; begin
+ca:=pg_temp.make_call();
+if ca.agent_snapshot->>'tts_provider'<>'sarvam' or ca.agent_snapshot->>'speaker'<>'ritu' or (ca.agent_snapshot->>'speech_pace')::numeric<>1.2 or ca.agent_snapshot->'qualification_questions'<>'["What is your budget?"]'::jsonb then raise exception 'agent controls not snapshotted'; end if;
+perform bind_voice_call(ca.id,repeat('a',64),provider,gen_random_uuid()::text);
+perform claim_voice_stream(ca.id,repeat('a',64));
+insert into call_turns(workspace_id,call_id,turn_key,role,content) values(ca.workspace_id,ca.id,gen_random_uuid(),'user','I am interested. My budget is ten thousand.');
+if (select count(*) from activity_events where kind='voice.reply')<>1 then raise exception 'voice reply event missing'; end if;
+if (select status from enrollments where sequence_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee')<>'replied' or (select next_run_at from enrollments where sequence_id='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee') is not null then raise exception 'voice reply did not stop sequence'; end if;
+if (select status from outbox where idempotency_key='voice-reply-test')<>'cancelled' or (select status from outbox where idempotency_key='other-workspace-test')<>'pending' then raise exception 'voice suppression crossed workspace'; end if;
+perform pg_temp.expect_error(format('insert into call_turns(workspace_id,call_id,turn_key,role,content) values(%L,%L,%L,%L,%L)','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',ca.id,gen_random_uuid(),'user','Foreign caller'),'voice_turn_workspace_mismatch');
+
+perform record_voice_runtime_end(ca.id);
+perform finish_voice_call(ca.id,provider,1,'completed');
+perform finish_voice_call(ca.id,provider,1,'completed');
+if (select count(*) from voice_analysis_jobs where call_id=ca.id)<>1 then raise exception 'analysis job replayed'; end if;
+update voice_settings set enabled=false where workspace_id=ca.workspace_id;
+if exists(select 1 from claim_voice_analyses(1)) then raise exception 'analysis bypassed workspace gate'; end if;
+update voice_settings set enabled=true where workspace_id=ca.workspace_id;
+delete from integration_acceptances where workspace_id=ca.workspace_id and channel='voice';
+if exists(select 1 from claim_voice_analyses(1)) then raise exception 'analysis bypassed acceptance gate'; end if;
+insert into integration_acceptances(workspace_id,channel,evidence,expires_at) values(ca.workspace_id,'voice','Disposable analysis acceptance fixture',now()+interval '1 hour');
+select * into j from claim_voice_analyses(1);
+if j.call_id<>ca.id or j.attempts<>1 then raise exception 'analysis claim failed'; end if;
+if exists(select 1 from claim_voice_analyses(1)) then raise exception 'analysis lease claimed twice'; end if;
+perform pg_temp.expect_error(format('select complete_voice_analysis(%L,%L,%L)',ca.id,gen_random_uuid(),'{"summary":"test","outcome":"interested","answers":[]}'),'analysis_lease_lost');
+perform fail_voice_analysis(j.call_id,j.lease_token);
+if (select status from voice_analysis_jobs where call_id=ca.id)<>'pending' or exists(select 1 from claim_voice_analyses(1)) then raise exception 'analysis backoff missing'; end if;
+update voice_analysis_jobs set next_run_at=now()-interval '1 second' where call_id=ca.id;
+select * into j2 from claim_voice_analyses(1);
+if j2.lease_token=j.lease_token or j2.attempts<>2 then raise exception 'analysis retry lease not rotated'; end if;
+perform pg_temp.expect_error(format('select complete_voice_analysis(%L,%L,%L)',ca.id,j.lease_token,'{"summary":"test","outcome":"interested","answers":[]}'),'analysis_lease_lost');
+perform pg_temp.expect_error(format('select complete_voice_analysis(%L,%L,%L)',ca.id,j2.lease_token,'{"summary":"test","outcome":"interested","answers":[]}'),'invalid_call_analysis');
+perform complete_voice_analysis(j2.call_id,j2.lease_token,'{"summary":"The caller is interested and has a budget of ten thousand.","outcome":"interested","answers":[{"question":"What is your budget?","answer":"Ten thousand"}]}');
+if (select ai_outcome from calls where id=ca.id)<>'interested' or (select analysis_status from calls where id=ca.id)<>'complete' then raise exception 'analysis not persisted'; end if;
+if (select count(*) from activity_events where kind='lead.hot')<>1 then raise exception 'hot lead event missing'; end if;
+perform pg_temp.expect_error(format('select complete_voice_analysis(%L,%L,%L)',ca.id,j2.lease_token,'{"summary":"test","outcome":"interested","answers":[]}'),'analysis_lease_lost');
+-- Abandoned leases can be recovered; exhausted attempts remain visible as failed.
+ca:=pg_temp.make_call(); perform reject_voice_call(ca.id,'local_fixture');
+select * into j from claim_voice_analyses(1);
+update voice_analysis_jobs set lease_until=now()-interval '1 second' where call_id=ca.id;
+select * into j2 from claim_voice_analyses(1);
+if j2.attempts<>2 or j2.lease_token=j.lease_token then raise exception 'crash lease not recovered'; end if;
+update voice_analysis_jobs set attempts=5,lease_until=now()-interval '1 second' where call_id=ca.id;
+perform claim_voice_analyses(1);
+if (select status from voice_analysis_jobs where call_id=ca.id)<>'failed' or (select analysis_status from calls where id=ca.id)<>'failed' then raise exception 'exhausted analysis lost'; end if;
+end $$;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+do $$begin
+begin perform claim_voice_analyses(1); raise exception 'browser claimed analysis'; exception when insufficient_privilege then null; end;
+begin perform complete_voice_analysis(gen_random_uuid(),gen_random_uuid(),'{}'); raise exception 'browser forged analysis'; exception when insufficient_privilege then null; end;
+begin select count(*) from voice_analysis_jobs; raise exception 'browser read job secrets'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+rollback;
+\echo 'PASS: PRD agent snapshots, voice reply events, analysis queue replay, leases, retry/backoff, crash recovery, outcomes, hot leads and browser denial'

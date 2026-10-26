@@ -6,6 +6,7 @@ import {
   streamXml,
   tokenHash,
   transferXml,
+  handoffWhisperXml,
   validSessionToken,
   verifyPlivo,
   voiceConfiguration,
@@ -97,12 +98,14 @@ export function createVoiceServer() {
       );
       return;
     }
-    const match = /^\/plivo\/(answer|hangup|transfer)\/([a-f0-9-]{36})$/.exec(
-      path.pathname,
-    );
+    const match =
+      /^\/plivo\/(answer|hangup|transfer|handoff-whisper)\/([a-f0-9-]{36})$/.exec(
+        path.pathname,
+      );
     if (
       !match ||
-      request.method !== "POST" ||
+      (request.method !== "POST" &&
+        !(match[1] === "handoff-whisper" && request.method === "GET")) ||
       !z.uuid().safeParse(match[2]).success
     ) {
       response.writeHead(404).end();
@@ -110,18 +113,24 @@ export function createVoiceServer() {
     }
     let authenticated = false;
     try {
-      const params = await formBody(request),
+      const params = request.method === "GET" ? {} : await formBody(request),
         id = match[2],
         call = await loadCall(id);
       const config = await loadCallVoiceConfig(id);
       if (
-        !signed(request, "POST", config.publicUrl, config.authToken, params)
+        !signed(
+          request,
+          request.method === "GET" ? "GET" : "POST",
+          config.publicUrl,
+          config.authToken,
+          params,
+        )
       ) {
         response.writeHead(401).end();
         return;
       }
       authenticated = true;
-      z.uuid().parse(params.CallUUID);
+      if (match[1] !== "handoff-whisper") z.uuid().parse(params.CallUUID);
       if (match[1] === "answer") {
         if (draining || !voiceConfiguration().enabled)
           throw Error("voice_not_enabled");
@@ -143,12 +152,38 @@ export function createVoiceServer() {
         response
           .writeHead(200, { "Content-Type": "application/xml" })
           .end(streamXml(config.publicUrl, id, token));
+      } else if (match[1] === "handoff-whisper") {
+        if (
+          call.ended_at ||
+          call.stop_requested_at ||
+          call.outcome !== "transfer_requested" ||
+          !call.handoff_summary ||
+          !call.handoff_expires_at ||
+          Date.parse(call.handoff_expires_at) < Date.now() ||
+          !validSessionToken(
+            path.searchParams.get("handoff") || "",
+            call.handoff_token_hash || "",
+          )
+        )
+          throw Error("handoff_not_authorized");
+        const { data: contact, error } = await voiceDb()
+          .from("contacts")
+          .select("consent,opted_out_at")
+          .eq("workspace_id", call.workspace_id)
+          .eq("id", call.contact_id)
+          .single();
+        if (error || !contact?.consent || contact.opted_out_at)
+          throw Error("contact_not_callable");
+        response
+          .writeHead(200, { "Content-Type": "application/xml" })
+          .end(handoffWhisperXml(call.handoff_summary));
       } else if (match[1] === "transfer") {
         const agent = parseAgent(call.agent_snapshot);
         if (
           call.provider_id !== params.CallUUID ||
           call.outcome !== "transfer_requested" ||
           call.ended_at ||
+          call.stop_requested_at ||
           !call.transfer_number
         )
           throw Error("transfer_not_authorized");
@@ -160,12 +195,31 @@ export function createVoiceServer() {
           .single();
         if (error || !contact?.consent || contact.opted_out_at)
           throw Error("contact_not_callable");
+        const handoffToken = path.searchParams.get("handoff") || "";
+        const warm = agent.transfer_mode !== "cold";
+        if (
+          warm &&
+          (!call.handoff_expires_at ||
+            Date.parse(call.handoff_expires_at) < Date.now() ||
+            !validSessionToken(handoffToken, call.handoff_token_hash || ""))
+        )
+          throw Error("handoff_not_authorized");
+        const confirmation = warm
+          ? `${config.publicUrl}/plivo/handoff-whisper/${call.id}?handoff=${handoffToken}`
+          : undefined;
         const remaining =
           agent.max_duration_seconds -
           Math.ceil((Date.now() - Date.parse(call.started_at)) / 1000);
         response
           .writeHead(200, { "Content-Type": "application/xml" })
-          .end(transferXml(call.caller_id, call.transfer_number, remaining));
+          .end(
+            transferXml(
+              call.caller_id,
+              call.transfer_number,
+              remaining,
+              confirmation,
+            ),
+          );
       } else {
         if (call.provider_id && call.provider_id !== params.CallUUID)
           throw Error("call_binding_conflict");

@@ -56,6 +56,11 @@ variable "secret_kms_key_arn" {
   type    = string
   default = null
 }
+variable "cartesia_enabled" {
+  type        = bool
+  default     = false
+  description = "Inject optional Cartesia secrets for legacy/selected Cartesia agents. Sarvam agents do not require them."
+}
 variable "integration_kms_key_arn" {
   type        = string
   description = "KMS key used by the web control plane to encrypt workspace Plivo connections."
@@ -227,7 +232,7 @@ resource "aws_ecs_task_definition" "voice" {
       { name = "VOICE_CALLING_ENABLED", value = tostring(var.calling_enabled)
       }
     ],
-    secrets = [for key in ["SARVAM_API_KEY", "CARTESIA_API_KEY", "CARTESIA_VOICE_EN", "CARTESIA_VOICE_HI", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] : { name = key, valueFrom = "${var.secret_arn}:${key}::" }],
+    secrets = [for key in concat(["SARVAM_API_KEY", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"], var.cartesia_enabled ? ["CARTESIA_API_KEY", "CARTESIA_VOICE_EN", "CARTESIA_VOICE_HI"] : []) : { name = key, valueFrom = "${var.secret_arn}:${key}::" }],
     logConfiguration = { logDriver = "awslogs", options = { awslogs-group = aws_cloudwatch_log_group.voice.name, awslogs-region = var.region, awslogs-stream-prefix = "service"
     } },
     healthCheck = { command = ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8080/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""], interval = 30, timeout = 5, retries = 3, startPeriod = 30
