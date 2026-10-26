@@ -104,6 +104,19 @@ export default function IntegrationReadiness({
           {error}
         </div>
       )}
+      <div className="console-ai-box" style={{ marginBottom: "20px" }}>
+        <div className="console-ai-header">
+          <span className="console-ai-title">
+            🤖 Central AI Engine: Included & Active
+          </span>
+          <span className="console-ai-hint">
+            Powered by AWS Bedrock (Claude) · Zero setup required for tenants
+          </span>
+        </div>
+        <p style={{ margin: "6px 0 0 0", fontSize: "12px", color: "#334155", lineHeight: 1.6 }}>
+          All generative AI intelligence, template copywriting, WhatsApp inbound agent reasoning, and post-call analytics are built-in and operated by Sprint. You only need to connect your three communication channels below (<strong>WhatsApp</strong>, <strong>Plivo Calling</strong>, and <strong>Email</strong>) to manage all sales and support operations from this dashboard.
+        </p>
+      </div>
       <div className="console-card-grid">
         {integrations.map(([key, title, foundation, missing, target]) => (
           <article className="console-mini-card" key={key}>
