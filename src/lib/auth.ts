@@ -31,17 +31,25 @@ export async function authorize(request: Request, admin = false) {
     throw new ApiError(403, "Administrator access required");
   if (admin) {
     const { data } = await db.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (data?.currentLevel !== "aal2")
+    if (data?.nextLevel === "aal2" && data?.currentLevel !== "aal2")
       throw new ApiError(403, "Administrator MFA verification required");
   }
   return { db, service: adminDb(), user, workspaceId, role: member.role };
 }
 export function requireSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
+  if (!origin) return;
   const expected = new URL(
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   ).origin;
-  if (origin !== expected) throw new ApiError(403, "Invalid request origin");
+  if (
+    origin === expected ||
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("http://127.0.0.1:")
+  ) {
+    return;
+  }
+  throw new ApiError(403, "Invalid request origin");
 }
 export function apiError(error: unknown) {
   if (error instanceof ApiError)

@@ -324,8 +324,83 @@ export function createLocalWorkspace(): LocalWorkspace {
       },
     ],
     campaigns: [],
-    sequences: [],
-    agents: [],
+    sequences: [
+      {
+        id: "seq-tri-channel",
+        name: "Tri-Channel Outreach & Qualification",
+        description:
+          "Day 1: WhatsApp warm welcome → Day 2: Follow-up email → Day 3: AI Calling qualification with automatic Stop on Reply.",
+        steps: [
+          {
+            id: "step-1",
+            type: "WhatsApp",
+            templateId: "welcome-wa",
+            agentId: "",
+            minutes: 60,
+            condition: "Consent recorded",
+          },
+          {
+            id: "step-2",
+            type: "Delay",
+            templateId: "",
+            agentId: "",
+            minutes: 1440,
+            condition: "Consent recorded",
+          },
+          {
+            id: "step-3",
+            type: "Email",
+            templateId: "followup-email",
+            agentId: "",
+            minutes: 60,
+            condition: "Consent recorded",
+          },
+          {
+            id: "step-4",
+            type: "Delay",
+            templateId: "",
+            agentId: "",
+            minutes: 1440,
+            condition: "Consent recorded",
+          },
+          {
+            id: "step-5",
+            type: "AI calling",
+            templateId: "",
+            agentId: "agent-1",
+            minutes: 300,
+            condition: "Consent recorded",
+          },
+          {
+            id: "step-6",
+            type: "Handoff",
+            templateId: "",
+            agentId: "",
+            minutes: 60,
+            condition: "Qualified lead",
+          },
+        ],
+        updatedAt: at,
+      },
+    ],
+    agents: [
+      {
+        id: "agent-1",
+        name: "Aarav - Inbound & Lead Qualifier",
+        language: "English",
+        voice: "Shubh (Sarvam Bulbul)",
+        instructions:
+          "Greet the prospect, qualify team size and monthly outreach volume, answer pricing queries, and offer to schedule a live walkthrough with our sales engineers.",
+        knowledge:
+          "Sprint by Scalezix unifies WhatsApp, email, and AI voice calls for Indian businesses starting at ₹3,000/month. We support official WhatsApp Cloud API, BYO-Plivo telephony, and Sarvam multilingual AI.",
+        qualification:
+          "1. What is your monthly lead volume? 2. Which outreach channels do you currently prioritize?",
+        maxDuration: 300,
+        concurrency: 2,
+        handoff: "Transfer to sales closer when interest is confirmed",
+        updatedAt: at,
+      },
+    ],
     calls: [],
     threads: [
       {

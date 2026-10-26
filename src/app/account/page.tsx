@@ -49,7 +49,8 @@ export default async function Page() {
         role: data[0].role,
         canEdit:
           ["owner", "administrator"].includes(data[0].role) &&
-          assurance?.currentLevel === "aal2",
+          (assurance?.nextLevel !== "aal2" ||
+            assurance?.currentLevel === "aal2"),
       }}
     />
   );

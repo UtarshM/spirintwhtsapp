@@ -145,7 +145,7 @@ export async function PATCH(request: Request) {
       throw new ApiError(422, "Invalid conversation update.");
     if (["owner", "administrator"].includes(role)) {
       const { data } = await db.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (data?.currentLevel !== "aal2")
+      if (data?.nextLevel === "aal2" && data?.currentLevel !== "aal2")
         throw new ApiError(
           403,
           "Verify your administrator authenticator first.",

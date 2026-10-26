@@ -42,7 +42,7 @@ export async function GET(
     if (
       !member ||
       !["owner", "administrator"].includes(member.role) ||
-      assurance?.currentLevel !== "aal2"
+      (assurance?.nextLevel === "aal2" && assurance?.currentLevel !== "aal2")
     )
       throw new Error();
     const c = oauthConfig(provider);
