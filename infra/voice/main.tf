@@ -56,6 +56,10 @@ variable "secret_kms_key_arn" {
   type    = string
   default = null
 }
+variable "integration_kms_key_arn" {
+  type        = string
+  description = "KMS key used by the web control plane to encrypt workspace Plivo connections."
+}
 variable "alarm_topic_arn" {
   type = string
 }
@@ -178,6 +182,20 @@ resource "aws_iam_role" "task" {
   name               = "${local.prefix}-task"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
 }
+resource "aws_iam_role_policy" "plivo_connection_decrypt" {
+  role = aws_iam_role.task.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["kms:Decrypt"]
+      Resource = var.integration_kms_key_arn
+      Condition = {
+        StringEquals = { "kms:EncryptionContext:provider" = "plivo" }
+      }
+    }]
+  })
+}
 resource "aws_ecs_cluster" "voice" {
   name = local.prefix
   setting {
@@ -203,11 +221,13 @@ resource "aws_ecs_task_definition" "voice" {
     environment = [
       { name = "NODE_ENV", value = "production" }, { name = "VOICE_PUBLIC_URL", value = "https://${var.domain}" },
       { name = "TSX_DISABLE_CACHE", value = "1" },
+      { name = "AWS_REGION", value = var.region },
+      { name = "AWS_KMS_KEY_ID", value = var.integration_kms_key_arn },
       { name = "VOICE_PORT", value = "8080" }, { name = "VOICE_SERVICE_MAX_SESSIONS", value = "20" },
       { name = "VOICE_CALLING_ENABLED", value = tostring(var.calling_enabled)
       }
     ],
-    secrets = [for key in ["PLIVO_AUTH_ID", "PLIVO_AUTH_TOKEN", "SARVAM_API_KEY", "CARTESIA_API_KEY", "CARTESIA_VOICE_EN", "CARTESIA_VOICE_HI", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] : { name = key, valueFrom = "${var.secret_arn}:${key}::" }],
+    secrets = [for key in ["SARVAM_API_KEY", "CARTESIA_API_KEY", "CARTESIA_VOICE_EN", "CARTESIA_VOICE_HI", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] : { name = key, valueFrom = "${var.secret_arn}:${key}::" }],
     logConfiguration = { logDriver = "awslogs", options = { awslogs-group = aws_cloudwatch_log_group.voice.name, awslogs-region = var.region, awslogs-stream-prefix = "service"
     } },
     healthCheck = { command = ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8080/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""], interval = 30, timeout = 5, retries = 3, startPeriod = 30
@@ -236,7 +256,7 @@ resource "aws_ecs_service" "voice" {
     container_name   = "voice"
     container_port   = 8080
   }
-  depends_on = [aws_lb_listener.voice, aws_iam_role_policy.secret, aws_iam_role_policy_attachment.execution]
+  depends_on = [aws_lb_listener.voice, aws_iam_role_policy.secret, aws_iam_role_policy_attachment.execution, aws_iam_role_policy.plivo_connection_decrypt]
 }
 resource "aws_cloudwatch_metric_alarm" "unhealthy" {
   alarm_name          = "${local.prefix}-unhealthy"

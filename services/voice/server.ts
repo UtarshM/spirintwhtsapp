@@ -8,11 +8,12 @@ import {
   transferXml,
   validSessionToken,
   verifyPlivo,
-  voiceConfig,
   voiceConfiguration,
 } from "../../src/lib/voice";
 import { attachVoiceSession } from "./session";
-import { plivoFinalStatus } from "../../src/lib/voice-outcomes";
+import { parsePlivoCdr } from "../../src/lib/voice-outcomes";
+import { plivoRequest } from "./providers";
+import { loadCallVoiceConfig } from "./credentials";
 import {
   loadCall,
   parseAgent,
@@ -107,22 +108,24 @@ export function createVoiceServer() {
       response.writeHead(404).end();
       return;
     }
+    let authenticated = false;
     try {
-      const config = voiceConfig(),
-        params = await formBody(request);
+      const params = await formBody(request),
+        id = match[2],
+        call = await loadCall(id);
+      const config = await loadCallVoiceConfig(id);
       if (
         !signed(request, "POST", config.publicUrl, config.authToken, params)
       ) {
         response.writeHead(401).end();
         return;
       }
-      const id = match[2];
+      authenticated = true;
       z.uuid().parse(params.CallUUID);
       if (match[1] === "answer") {
         if (draining || !voiceConfiguration().enabled)
           throw Error("voice_not_enabled");
-        const token = path.searchParams.get("token") || "",
-          call = await loadCall(id);
+        const token = path.searchParams.get("token") || "";
         if (!validSessionToken(token, call.session_hash))
           throw Error("invalid_voice_session");
         if (
@@ -141,8 +144,7 @@ export function createVoiceServer() {
           .writeHead(200, { "Content-Type": "application/xml" })
           .end(streamXml(config.publicUrl, id, token));
       } else if (match[1] === "transfer") {
-        const call = await loadCall(id),
-          agent = parseAgent(call.agent_snapshot);
+        const agent = parseAgent(call.agent_snapshot);
         if (
           call.provider_id !== params.CallUUID ||
           call.outcome !== "transfer_requested" ||
@@ -165,7 +167,6 @@ export function createVoiceServer() {
           .writeHead(200, { "Content-Type": "application/xml" })
           .end(transferXml(call.caller_id, call.transfer_number, remaining));
       } else {
-        const call = await loadCall(id);
         if (call.provider_id && call.provider_id !== params.CallUUID)
           throw Error("call_binding_conflict");
         // A never-answered call has no answer callback to bind its CallUUID.
@@ -179,6 +180,16 @@ export function createVoiceServer() {
             params.From?.replace(/^\+?/, "+") !== call.caller_id
           )
             throw Error("call_binding_conflict");
+        }
+        // Customers know their account token and can sign callbacks themselves.
+        // Read the terminal CDR directly from Plivo before binding/settlement.
+        const cdr = parsePlivoCdr(
+          await plivoRequest(config, `Call/${params.CallUUID}/`, "GET"),
+          params.CallUUID,
+          call,
+        );
+        if (cdr.state !== "complete") throw Error("voice_cdr_unconfirmed");
+        if (!call.provider_id) {
           const { error } = await voiceDb()
             .from("calls")
             .update({ provider_id: params.CallUUID })
@@ -186,22 +197,18 @@ export function createVoiceServer() {
             .is("provider_id", null);
           if (error) throw Error("voice_callback_save_failed");
         }
-        const seconds = params.BillDuration;
-        if (!seconds || !/^\d{1,4}$/.test(seconds))
-          throw Error("billed_duration_required");
-        const status = plivoFinalStatus(params);
-        if (!status) throw Error("call_outcome_requires_reconciliation");
         await voiceRpc("finish_voice_call", {
           call_id: id,
           provider_uuid: params.CallUUID,
-          billed_seconds: Number(seconds),
-          final_status: status,
+          billed_seconds: cdr.billedSeconds,
+          final_status: cdr.finalStatus,
         });
         response.writeHead(200).end("OK");
       }
     } catch {
       // Trigger provider retry on persistence failures. Answer failures end the call.
-      if (match[1] === "hangup")
+      if (!authenticated) response.writeHead(401).end("Unauthorized");
+      else if (match[1] === "hangup")
         response.writeHead(503).end("Callback requires reconciliation");
       else
         response
@@ -225,19 +232,17 @@ export function createVoiceServer() {
     upgrading++;
     const timeout = setTimeout(() => socket.destroy(), 8000);
     void (async () => {
-      const config = voiceConfig(),
-        path = new URL(request.url || "/", config.publicUrl);
+      const path = new URL(request.url || "/", "http://internal");
       const match = /^\/stream\/([a-f0-9-]{36})$/.exec(path.pathname);
-      if (
-        !match ||
-        !z.uuid().safeParse(match[1]).success ||
-        !signed(request, "GET", config.publicUrl, config.authToken)
-      )
+      if (!match || !z.uuid().safeParse(match[1]).success)
         throw Error("invalid_voice_upgrade");
       const token = path.searchParams.get("token") || "",
         call = await loadCall(match[1]);
       if (!validSessionToken(token, call.session_hash))
         throw Error("invalid_voice_session");
+      const config = await loadCallVoiceConfig(call.id);
+      if (!signed(request, "GET", config.publicUrl, config.authToken))
+        throw Error("invalid_voice_signature");
       const claimed = (await voiceRpc("claim_voice_stream", {
         call_id: call.id,
         secret_hash: tokenHash(token),

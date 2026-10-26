@@ -19,6 +19,8 @@ const providerId = "11111111-1111-4111-8111-111111111111";
 const now = new Date("2026-10-25T12:00:00.000Z");
 const complete = (id = providerId) => ({
   call_uuid: id,
+  from_number: "12025550123",
+  to_number: "919876543210",
   answer_time: "2026-10-25 16:58:00+05:30",
   end_time: "2026-10-25 16:58:10+05:30",
   bill_duration: 10,
@@ -160,6 +162,8 @@ function row(id: string, provider: string | null = id): Row {
   return {
     id,
     provider_id: provider,
+    caller_id: "+12025550123",
+    destination: "+919876543210",
     reconcile_attempts: 0,
     reconciliation_state: "pending",
     created_at: "2026-10-25T09:00:00.000Z",
@@ -287,6 +291,70 @@ test("unknown identities cannot starve later calls behind the 100-row batch", as
   assert.deepEqual(h.fetches, ["recoverable"]);
 });
 
+test("each call uses its own customer credentials and a missing connection fails closed", async () => {
+  const h = harness(
+    [
+      row("customer-a"),
+      row("customer-b"),
+      { ...row("missing-connection"), created_at: "2026-10-25T08:59:00.000Z" },
+      row("unbound", null),
+    ],
+    {
+      "customer-a": complete("customer-a"),
+      "customer-b": complete("customer-b"),
+    },
+  );
+  const requestedConfigs: string[] = [],
+    routed: { providerId: string; authId: string }[] = [];
+  const customerA = {
+      authId: "MAcustomerA",
+      authToken: "customer-a-private",
+    } as VoiceConfig,
+    customerB = {
+      authId: "MAcustomerB",
+      authToken: "customer-b-private",
+    } as VoiceConfig;
+  h.deps.config = async (call) => {
+    requestedConfigs.push(call.id);
+    if (call.id === "customer-a") return customerA;
+    if (call.id === "customer-b") return customerB;
+    throw Error("connection_missing_or_wrong_workspace");
+  };
+  const cdr = h.deps.cdr;
+  h.deps.cdr = async (config, id) => {
+    routed.push({ providerId: id, authId: config.authId });
+    assert.equal(config, id === "customer-a" ? customerA : customerB);
+    return cdr(config, id);
+  };
+  assert.deepEqual(await reconcileVoiceCalls(h.deps), {
+    settled: 2,
+    manual: 1,
+    retry: 1,
+  });
+  assert.deepEqual(requestedConfigs, [
+    "missing-connection",
+    "customer-a",
+    "customer-b",
+  ]);
+  assert.deepEqual(routed, [
+    { providerId: "customer-a", authId: "MAcustomerA" },
+    { providerId: "customer-b", authId: "MAcustomerB" },
+  ]);
+  assert.equal(
+    h.rows.find((r) => r.id === "missing-connection")!.ended_at,
+    null,
+  );
+  assert.equal(
+    h.rows.find((r) => r.id === "missing-connection")!.last_error,
+    "voice_cdr_fetch_failed",
+  );
+  assert.equal(
+    h.settlements.some((s) => s.id === "missing-connection"),
+    false,
+  );
+  assert.equal(JSON.stringify(h.updates).includes("private"), false);
+});
+
 test("incomplete CDRs back off, exhaust to manual review, and never release credits", async () => {
   const h = harness([row("incomplete")], {
     incomplete: { ...complete("incomplete"), end_time: null },
@@ -342,4 +410,22 @@ test("transactional settlement rejection preserves the call for retry and proces
     h.settlements.map((s) => s.id),
     ["valid"],
   );
+});
+
+test("CDRs must match snapshotted caller and destination before settlement", () => {
+  const binding = { caller_id: "+12025550123", destination: "+919876543210" };
+  assert.equal(
+    parsePlivoCdr(complete(), providerId, binding).state,
+    "complete",
+  );
+  for (const change of [
+    { from_number: "12025550999" },
+    { to_number: "919876543211" },
+    { from_number: undefined },
+  ]) {
+    assert.deepEqual(
+      parsePlivoCdr({ ...complete(), ...change }, providerId, binding),
+      { state: "manual", code: "voice_cdr_number_conflict" },
+    );
+  }
 });

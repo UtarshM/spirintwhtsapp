@@ -1,4 +1,4 @@
-import { voiceConfig, type VoiceConfig } from "../../src/lib/voice";
+import type { VoiceConfig } from "../../src/lib/voice";
 import {
   parsePlivoCdr,
   type VoiceFinalStatus,
@@ -10,6 +10,8 @@ export type ReconciliationCall = {
   id: string;
   provider_id: string | null;
   reconcile_attempts: number;
+  caller_id: string;
+  destination: string;
 };
 export type ReconciliationUpdate = {
   reconciliation_state: "pending" | "manual";
@@ -19,7 +21,7 @@ export type ReconciliationUpdate = {
 };
 export type ReconciliationDependencies = {
   now: () => Date;
-  config: () => VoiceConfig;
+  config: (call: ReconciliationCall) => VoiceConfig | Promise<VoiceConfig>;
   due: (now: string, createdBefore: string) => Promise<ReconciliationCall[]>;
   cdr: (config: VoiceConfig, providerId: string) => Promise<unknown>;
   finish: (
@@ -34,11 +36,14 @@ export type ReconciliationDependencies = {
 };
 const defaults: ReconciliationDependencies = {
   now: () => new Date(),
-  config: voiceConfig,
+  config: async (call) => {
+    const { loadCallVoiceConfig } = await import("./credentials");
+    return loadCallVoiceConfig(call.id);
+  },
   due: async (now, createdBefore) => {
     const { data, error } = await voiceDb()
       .from("calls")
-      .select("id,provider_id,reconcile_attempts")
+      .select("id,provider_id,reconcile_attempts,caller_id,destination")
       .not("request_key", "is", null)
       .is("ended_at", null)
       .eq("reconciliation_state", "pending")
@@ -82,8 +87,7 @@ export function reconciliationDelayMs(attempt: number) {
 export async function reconcileVoiceCalls(
   deps: ReconciliationDependencies = defaults,
 ) {
-  const config = deps.config(),
-    now = deps.now(),
+  const now = deps.now(),
     calls = await deps.due(
       now.toISOString(),
       new Date(now.getTime() - 20 * 60000).toISOString(),
@@ -117,12 +121,19 @@ export async function reconcileVoiceCalls(
     }
     let cdr: unknown;
     try {
+      // Resolve the immutable customer connection for this call only. A missing
+      // or mismatched connection must never fall back to platform/previous-call
+      // credentials, and cannot prevent other workspaces from being processed.
+      const config = await deps.config(call);
       cdr = await deps.cdr(config, call.provider_id);
     } catch {
       await defer(call, "voice_cdr_fetch_failed");
       continue;
     }
-    const parsed = parsePlivoCdr(cdr, call.provider_id);
+    const parsed = parsePlivoCdr(cdr, call.provider_id, {
+      caller_id: call.caller_id,
+      destination: call.destination,
+    });
     if (parsed.state !== "complete") {
       await defer(call, parsed.code, parsed.state === "manual");
       continue;

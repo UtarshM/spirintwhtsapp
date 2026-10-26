@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authorize, apiError, ApiError, requireSameOrigin } from "@/lib/auth";
-import { voiceConfig } from "@/lib/voice";
+import { loadCallVoiceConfig } from "../../../../../services/voice/credentials";
 import { plivoRequest } from "../../../../../services/voice/providers";
 export const dynamic = "force-dynamic";
 export async function GET(
@@ -54,19 +54,12 @@ export async function POST(
     });
     if (error || !call) throw new ApiError(404, "Call not found.");
     if (call.ended_at) return NextResponse.json({ stopped: true });
+    const config = await loadCallVoiceConfig(id);
     try {
       if (call.provider_id)
-        await plivoRequest(
-          voiceConfig(),
-          `Call/${call.provider_id}/`,
-          "DELETE",
-        );
+        await plivoRequest(config, `Call/${call.provider_id}/`, "DELETE");
       else if (call.request_uuid)
-        await plivoRequest(
-          voiceConfig(),
-          `Request/${call.request_uuid}/`,
-          "DELETE",
-        );
+        await plivoRequest(config, `Request/${call.request_uuid}/`, "DELETE");
       // Launch can still be in flight. Its response and any answer callback honor the durable stop.
     } catch {
       throw new ApiError(

@@ -124,14 +124,23 @@ export type PlivoCdrResult =
   | { state: "complete"; billedSeconds: number; finalStatus: VoiceFinalStatus }
   | { state: "retry" | "manual"; code: string };
 
-/** REST CDRs only; callback callers use plivoFinalStatus directly. */
+/** REST CDRs only. Customer-owned signatures are not billing authority. */
 export function parsePlivoCdr(
   value: unknown,
   expectedProviderId: string,
+  expectedNumbers?: { caller_id: string; destination: string },
 ): PlivoCdrResult {
   const record = fields(value);
   if (record.call_uuid !== expectedProviderId)
     return { state: "manual", code: "voice_cdr_binding_conflict" };
+  if (
+    expectedNumbers &&
+    (typeof record.from_number !== "string" ||
+      typeof record.to_number !== "string" ||
+      record.from_number.replace(/^\+?/, "+") !== expectedNumbers.caller_id ||
+      record.to_number.replace(/^\+?/, "+") !== expectedNumbers.destination)
+  )
+    return { state: "manual", code: "voice_cdr_number_conflict" };
   if (!record.end_time) return { state: "retry", code: "voice_cdr_incomplete" };
   if (timestamp(record.end_time) === null)
     return { state: "retry", code: "voice_cdr_end_time_invalid" };

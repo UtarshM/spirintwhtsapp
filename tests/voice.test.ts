@@ -85,8 +85,8 @@ test("voice gates reject missing configuration and malformed public origins", ()
   assert.equal(voiceConfiguration({}).configured, false);
   const env = {
     VOICE_PUBLIC_URL: "https://voice.example.com",
-    PLIVO_AUTH_ID: "a",
-    PLIVO_AUTH_TOKEN: "b",
+    AWS_REGION: "ap-south-1",
+    AWS_KMS_KEY_ID: "test-key",
     SARVAM_API_KEY: "c",
     CARTESIA_API_KEY: "d",
     CARTESIA_VOICE_EN: config.englishVoice,
@@ -356,6 +356,7 @@ function harness(overrides: Partial<VoiceSessionDependencies> = {}) {
       interrupted.push(key);
     },
     transferRequested: async () => {},
+    finalizeUsage: async () => {},
     ...overrides,
   };
   const session = attachVoiceSession(
@@ -514,4 +515,48 @@ test("a speech provider disconnect ends the call rather than continuing without 
   assert.equal(h.session.closed, true);
   assert.ok(h.errors.includes("sarvam_disconnected"));
   assert.ok(h.commands.some((c) => c.startsWith("DELETE")));
+});
+
+test("runtime usage is finalized once before provider hangup, including unexpected disconnect", async () => {
+  let release: () => void = () => {};
+  let meters = 0;
+  const h = harness({
+    finalizeUsage: async () => {
+      meters++;
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    },
+  });
+  h.start();
+  const stopping = h.session.stop();
+  await tick();
+  assert.equal(h.commands.length, 0);
+  assert.equal(h.session.closed, true);
+  h.socket.close();
+  release();
+  await stopping;
+  assert.equal(meters, 1);
+  assert.equal(h.commands.filter((c) => c.startsWith("DELETE")).length, 1);
+  let disconnectedMeter = 0;
+  const other = harness({
+    finalizeUsage: async () => {
+      disconnectedMeter++;
+    },
+  });
+  other.socket.close();
+  await tick();
+  assert.equal(disconnectedMeter, 1);
+});
+test("meter persistence failure holds settlement but still terminates audio and provider call", async () => {
+  const h = harness({
+    finalizeUsage: async () => {
+      throw Error("db offline");
+    },
+  });
+  h.start();
+  await h.session.stop();
+  assert.ok(h.errors.includes("voice_runtime_usage_requires_reconciliation"));
+  assert.ok(h.commands.some((c) => c.startsWith("DELETE")));
+  assert.equal(h.socket.readyState, WebSocket.CLOSED);
 });

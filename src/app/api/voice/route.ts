@@ -5,7 +5,6 @@ import { authorize, apiError, ApiError, requireSameOrigin } from "@/lib/auth";
 import {
   tokenHash,
   voiceAgentSchema,
-  voiceConfig,
   voiceConfiguration,
   voiceWindowsSchema,
 } from "@/lib/voice";
@@ -13,10 +12,12 @@ import {
   plivoRequest,
   VoiceProviderError,
 } from "../../../../services/voice/providers";
+import { loadCallVoiceConfig } from "../../../../services/voice/credentials";
+import { verifyPlivoCaller } from "@/lib/plivo-connection";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 const fields =
-  "id,contact_id,agent_id,status,duration_seconds,created_at,started_at,ended_at,last_error,outcome";
+  "id,contact_id,agent_id,status,duration_seconds,ai_runtime_seconds,runtime_usage_finalized,created_at,started_at,ended_at,last_error,outcome";
 export async function GET(request: Request) {
   try {
     const { db, service, workspaceId, role } = await authorize(request);
@@ -43,7 +44,9 @@ export async function GET(request: Request) {
           .limit(500),
         service
           .from("voice_settings")
-          .select("caller_id,transfer_number,enabled,max_concurrency")
+          .select(
+            "caller_id,transfer_number,enabled,max_concurrency,plivo_connection_id",
+          )
           .eq("workspace_id", workspaceId)
           .maybeSingle(),
         service
@@ -89,7 +92,8 @@ export async function GET(request: Request) {
             config.configured &&
             config.enabled &&
             accepted &&
-            settings.data?.enabled === true,
+            settings.data?.enabled === true &&
+            Boolean(settings.data.plivo_connection_id),
         },
         canManage: role !== "agent",
       },
@@ -181,8 +185,7 @@ export async function POST(request: Request) {
         503,
         "Calling is disabled until the AWS service, provider settings and acceptance tests are complete.",
       );
-    const config = voiceConfig(),
-      token = randomBytes(32).toString("base64url"),
+    const token = randomBytes(32).toString("base64url"),
       hash = tokenHash(token);
     const { data: call, error } = await service.rpc("prepare_voice_call", {
       w: workspaceId,
@@ -205,6 +208,8 @@ export async function POST(request: Request) {
         "approved_voice_rate_required",
         "insufficient_credits",
         "idempotency_conflict",
+        "plivo_connection_required",
+        "plivo_caller_not_owned",
       ];
       const code = allowed.find((c) => error?.message.includes(c));
       throw new ApiError(
@@ -221,6 +226,25 @@ export async function POST(request: Request) {
         status: call.status,
         replay: true,
       });
+    let config;
+    try {
+      config = await loadCallVoiceConfig(call.id);
+      await verifyPlivoCaller(config, call.caller_id);
+    } catch {
+      const { error: releaseError } = await service.rpc("reject_voice_call", {
+        call_id: call.id,
+        safe_code: "plivo_caller_verification_failed",
+      });
+      if (releaseError)
+        throw new ApiError(
+          503,
+          "Calling setup needs reconciliation. No automatic retry will occur.",
+        );
+      throw new ApiError(
+        502,
+        "Your Plivo connection or calling number could not be verified. No call was placed.",
+      );
+    }
     try {
       const result = await plivoRequest(config, "Call/", "POST", {
         from: call.caller_id,

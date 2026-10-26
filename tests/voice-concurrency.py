@@ -21,8 +21,9 @@ insert into memberships values('{w}','{user}','owner');
 insert into wallets(workspace_id,balance) values('{w}',10000);
 insert into contacts(id,workspace_id,name,phone,consent) values('{contact}','{w}','Test contact','+12025550123',true);
 insert into voice_agents(id,workspace_id,name,language,instructions,status,max_duration_seconds) values('{agent}','{w}','Test agent','en','Answer test questions','ready',60);
+select connect_plivo_account('{w}','{user}','{uuid.uuid4()}','MA{w.replace("-", "")}','{'x'*32}','[{{"number":"+12025550124","label":"Disposable test number"}}]','+12025550124');
 insert into integration_acceptances(workspace_id,channel,evidence,expires_at) values('{w}','voice','Disposable concurrency fixture',now()+interval '1 hour');
-insert into voice_settings(workspace_id,caller_id,allowed_destinations,enabled) values('{w}','+12025550124','{{+12025550123}}',true);
+update voice_settings set allowed_destinations='{{+12025550123}}',enabled=true where workspace_id='{w}';
 insert into sending_windows(workspace_id,channel,weekday,start_time,end_time,enabled) select '{w}','voice',day,'00:00','23:59:59',true from generate_series(0,6) day;
 insert into credit_rates(channel,unit,rate_microcredits,effective_at,approved) values('voice','minute',100,now(),true);
 """)

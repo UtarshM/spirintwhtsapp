@@ -47,13 +47,14 @@ export type VoiceConfig = {
   englishVoice: string;
   hindiVoice: string;
 };
+export type VoiceServiceConfig = Omit<VoiceConfig, "authId" | "authToken">;
 export function voiceConfiguration(
   env: Record<string, string | undefined> = process.env,
 ) {
   const required = [
     "VOICE_PUBLIC_URL",
-    "PLIVO_AUTH_ID",
-    "PLIVO_AUTH_TOKEN",
+    "AWS_KMS_KEY_ID",
+    "AWS_REGION",
     "SARVAM_API_KEY",
     "CARTESIA_API_KEY",
     "CARTESIA_VOICE_EN",
@@ -86,12 +87,10 @@ export function voiceConfiguration(
     missing,
   };
 }
-export function voiceConfig(): VoiceConfig {
+export function voiceServiceConfig(): VoiceServiceConfig {
   if (!voiceConfiguration().configured) throw Error("voice_not_configured");
   return {
     publicUrl: new URL(process.env.VOICE_PUBLIC_URL!).origin,
-    authId: process.env.PLIVO_AUTH_ID!,
-    authToken: process.env.PLIVO_AUTH_TOKEN!,
     sarvamKey: process.env.SARVAM_API_KEY!,
     cartesiaKey: process.env.CARTESIA_API_KEY!,
     englishVoice: process.env.CARTESIA_VOICE_EN!,

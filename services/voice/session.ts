@@ -32,6 +32,7 @@ export type VoiceSessionDependencies = {
   markError: (call: CallRecord, code: string) => Promise<void>;
   interrupted: (call: CallRecord, key: string) => Promise<void>;
   transferRequested: (call: CallRecord) => Promise<void>;
+  finalizeUsage: (call: CallRecord) => Promise<void>;
 };
 const defaults: VoiceSessionDependencies = {
   speech: cartesiaSpeech,
@@ -45,6 +46,9 @@ const defaults: VoiceSessionDependencies = {
       handshakeTimeout: 5000,
     }),
   rpc: voiceRpc,
+  finalizeUsage: async (call) => {
+    await voiceRpc("record_voice_runtime_end", { call_id: call.id });
+  },
   healthy: async (call) => {
     const current = await loadCall(call.id);
     const { data: contact, error } = await voiceDb()
@@ -131,6 +135,7 @@ export function attachVoiceSession(
     pending:
       { name: string; action: VoiceReply["action"]; key: string } | undefined;
   let silenceTimer: ReturnType<typeof setTimeout> | undefined;
+  let usageFinalized: Promise<void> | undefined;
   const send = (value: object) => {
     if (ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > 256000)
       throw Error("voice_socket_backpressure");
@@ -141,7 +146,7 @@ export function attachVoiceSession(
     silenceTimer = setTimeout(() => void fail("caller_silence_timeout"), 30000);
   };
   function cleanup() {
-    if (closed) return;
+    if (closed) return usageFinalized;
     closed = true;
     epoch++;
     controller.abort();
@@ -156,6 +161,12 @@ export function attachVoiceSession(
     )
       stt.close();
     queuedAudio = [];
+    // Only this service closes the AI meter. Customer-owned Plivo callbacks
+    // cannot supply the platform's billable AI duration.
+    usageFinalized = deps.finalizeUsage(call).catch(async () => {
+      await markError("voice_runtime_usage_requires_reconciliation");
+    });
+    return usageFinalized;
   }
   async function end(action: "end" | "handoff" | "opt_out") {
     if (closed) return;
@@ -165,22 +176,23 @@ export function attachVoiceSession(
       transferring = true;
       try {
         await deps.transferRequested(call);
+        await cleanup();
         await deps.command(config, `Call/${call.provider_id}/`, "POST", {
           legs: "aleg",
           aleg_url: `${config.publicUrl}/plivo/transfer/${call.id}`,
           aleg_method: "POST",
         });
-        cleanup();
         ws.close(1000, "Transferring to team");
         return;
       } catch {
         transferring = false;
+        await cleanup();
         await markError("voice_transfer_requires_reconciliation");
-        await fail("voice_transfer_failed");
+        await terminate("voice_transfer_failed");
         return;
       }
     }
-    cleanup();
+    await cleanup();
     try {
       await deps.command(config, `Call/${call.provider_id}/`, "DELETE");
     } catch {
@@ -198,7 +210,10 @@ export function attachVoiceSession(
   }
   async function fail(code: string) {
     if (closed) return;
-    cleanup();
+    await cleanup();
+    await terminate(code);
+  }
+  async function terminate(code: string) {
     await markError(code);
     try {
       await deps.command(config, `Call/${call.provider_id}/`, "DELETE");
@@ -399,7 +414,7 @@ export function attachVoiceSession(
   });
   ws.on("close", () => {
     if (!closed && !transferring) void fail("plivo_stream_disconnected");
-    else cleanup();
+    else void cleanup();
   });
   ws.on("error", () => void fail("plivo_stream_failed"));
   return {

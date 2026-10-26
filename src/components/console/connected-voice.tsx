@@ -3,12 +3,15 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { AccountIdentity } from "@/lib/workspace-document";
 import type { VoiceAgent } from "@/lib/voice";
 import { Badge, Empty, Panel, date, download } from "./ui";
+import PlivoConnection from "./plivo-connection";
 type Call = {
   id: string;
   contact_id: string;
   agent_id: string;
   status: string;
   duration_seconds: number;
+  ai_runtime_seconds: number;
+  runtime_usage_finalized: boolean;
   created_at: string;
   started_at: string | null;
   ended_at: string | null;
@@ -246,6 +249,12 @@ export default function ConnectedVoice({
         </div>
       )}
       {message && <p role="status">{message}</p>}
+      {view === "setup" && (
+        <PlivoConnection
+          account={account}
+          onChanged={() => setRevision((v) => v + 1)}
+        />
+      )}
       <Panel
         title="Connected AI calling"
         description="Create voice agents, place account calls and review conversations."
@@ -669,7 +678,8 @@ export default function ConnectedVoice({
                     <th>Contact</th>
                     <th>Started</th>
                     <th>Status</th>
-                    <th>Duration</th>
+                    <th>Plivo duration</th>
+                    <th>AI runtime</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -687,6 +697,11 @@ export default function ConnectedVoice({
                         {c.last_error && <p>Review required</p>}
                       </td>
                       <td>{c.duration_seconds}s</td>
+                      <td>
+                        {c.runtime_usage_finalized
+                          ? `${c.ai_runtime_seconds}s`
+                          : "Pending"}
+                      </td>
                       <td>
                         <button
                           className="secondary"

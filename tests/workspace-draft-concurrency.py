@@ -5,8 +5,9 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument('--host', required=True)
 parser.add_argument('--port', required=True)
+parser.add_argument('--database', default='postgres')
 args = parser.parse_args()
-command = ['psql', '-h', args.host, '-p', args.port, '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-At']
+command = ['psql', '-h', args.host, '-p', args.port, '-d', args.database, '-v', 'ON_ERROR_STOP=1', '-At']
 def sql(query):
     return subprocess.run(command + ['-c', query], capture_output=True, text=True)
 workspace = '44444444-4444-4444-8444-444444444444'

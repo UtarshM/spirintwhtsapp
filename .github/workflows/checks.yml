@@ -62,6 +62,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/workspace-draft.database.sql
           psql -v ON_ERROR_STOP=1 -f tests/meta-events.database.sql
           psql -v ON_ERROR_STOP=1 -f tests/voice.database.sql
+          psql -v ON_ERROR_STOP=1 -f tests/plivo-connection.database.sql
           python3 tests/database-concurrency.py --host 127.0.0.1 --port 5432
           python3 tests/workspace-draft-concurrency.py --host 127.0.0.1 --port 5432
           python3 tests/meta-events-concurrency.py --host 127.0.0.1 --port 5432

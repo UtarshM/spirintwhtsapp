@@ -5,6 +5,7 @@ RUN npm ci --include=dev && npm cache clean --force
 COPY tsconfig.json ./
 COPY src/lib/voice.ts ./src/lib/voice.ts
 COPY src/lib/voice-outcomes.ts ./src/lib/voice-outcomes.ts
+COPY src/lib/plivo-connection.ts ./src/lib/plivo-connection.ts
 COPY services/voice ./services/voice
 ENV NODE_ENV=production VOICE_PORT=8080
 USER node
