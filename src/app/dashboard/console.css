@@ -738,6 +738,42 @@
 .console-notice button {
   margin-top: 10px;
 }
+.console-ai-box {
+  padding: 14px 16px;
+  background: #f0f6ff;
+  border: 1px solid #c8dcfa;
+  border-radius: 8px;
+  margin: 14px 0;
+}
+.console-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.console-ai-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #1a4270;
+}
+.console-ai-hint {
+  font-size: 11px;
+  color: #557299;
+}
+.console-ai-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.console-ai-row input {
+  flex: 1;
+  background: #ffffff;
+}
 .console-panel-body > .secondary:disabled {
   margin-top: 20px;
 }

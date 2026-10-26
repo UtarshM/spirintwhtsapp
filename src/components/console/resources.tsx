@@ -57,7 +57,7 @@ const definitions: Record<string, Definition> = {
   "chat-agent": {
     title: "WhatsApp AI agent drafts",
     description:
-      "Prepare instructions and knowledge. The local preview retrieves matching lines; no LLM or AI agent is running.",
+      "Configure automated conversational intelligence powered by AWS Bedrock (Claude) with knowledge grounding and human escalation.",
     fields: [
       {
         key: "instructions",
@@ -235,6 +235,7 @@ export default function Resources({
   const [edit, setEdit] = useState<Resource | null | undefined>(),
     [preview, setPreview] = useState(""),
     [result, setResult] = useState(""),
+    [agentLoading, setAgentLoading] = useState(false),
     [showArchived, setShowArchived] = useState(false);
   if (!definition) return null;
   const rows = s.resources.filter(
@@ -714,31 +715,86 @@ export default function Resources({
           )}
           {kind === "chat-agent" && (
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const f = new FormData(e.currentTarget);
-                const words = formValue(f, "message")
-                  .toLowerCase()
-                  .split(/\W+/)
-                  .filter((w) => w.length > 3);
-                const line = item.data.knowledge
-                  .split("\n")
-                  .find((line) =>
-                    words.some((w) => line.toLowerCase().includes(w)),
+                const message = formValue(f, "message");
+                if (!message.trim()) return;
+                setAgentLoading(true);
+                setResult("Invoking Claude AI Agent via AWS Bedrock...");
+                try {
+                  const res = await fetch("/api/ai", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      action: "chat_agent_reply",
+                      userMessage: message,
+                      instructions: item.data.instructions,
+                      knowledge: item.data.knowledge,
+                      handoffInstruction: item.data.handoff,
+                    }),
+                  });
+                  const json = await res.json();
+                  if (res.ok && json.ok && json.data) {
+                    const { reply, requiresHandoff } = json.data;
+                    const handoffText = requiresHandoff
+                      ? `\n\n🚨 [Escalation Triggered]: Handoff flag raised (${item.data.handoff || "Human agent requested"}).`
+                      : "";
+                    setResult(
+                      `🤖 Claude AI Agent (${json.model || "Bedrock"}):\n${reply}${handoffText}`,
+                    );
+                  } else {
+                    const words = message
+                      .toLowerCase()
+                      .split(/\W+/)
+                      .filter((w) => w.length > 3);
+                    const line = item.data.knowledge
+                      .split("\n")
+                      .find((l) =>
+                        words.some((w) => l.toLowerCase().includes(w)),
+                      );
+                    setResult(
+                      line
+                        ? `Local fallback match: ${line}`
+                        : `No matching knowledge line. Handoff guidance: ${item.data.handoff}`,
+                    );
+                  }
+                } catch {
+                  const words = message
+                    .toLowerCase()
+                    .split(/\W+/)
+                    .filter((w) => w.length > 3);
+                  const line = item.data.knowledge
+                    .split("\n")
+                    .find((l) =>
+                      words.some((w) => l.toLowerCase().includes(w)),
+                    );
+                  setResult(
+                    line
+                      ? `Local fallback match: ${line}`
+                      : `No matching knowledge line. Handoff guidance: ${item.data.handoff}`,
                   );
-                setResult(
-                  line
-                    ? `Local keyword match (not AI): ${line}`
-                    : `No matching knowledge line. Handoff guidance: ${item.data.handoff}`,
-                );
+                } finally {
+                  setAgentLoading(false);
+                }
               }}
             >
-              <p>{item.data.greeting || "Preview a knowledge response."}</p>
+              <p>
+                {item.data.greeting ||
+                  "Preview live conversational intelligence with Claude."}
+              </p>
               <label>
-                Test message
-                <input name="message" required maxLength={1000} />
+                Customer inbound message
+                <input
+                  name="message"
+                  required
+                  maxLength={1000}
+                  placeholder="e.g. Do you support enterprise team accounts?"
+                />
               </label>
-              <button className="primary">Preview keyword retrieval</button>
+              <button className="primary" disabled={agentLoading} type="submit">
+                {agentLoading ? "Claude is thinking..." : "Test Claude AI Reply"}
+              </button>
             </form>
           )}
           <p className="console-notice" role="status" aria-live="polite">

@@ -124,13 +124,58 @@ export default function Templates({
     [buttons, setButtons] = useState<Buttons>([]),
     [cards, setCards] = useState<Card[]>([]),
     [previewId, setPreviewId] = useState(""),
-    [query, setQuery] = useState("");
+    [query, setQuery] = useState(""),
+    [aiPrompt, setAiPrompt] = useState(""),
+    [aiGenerating, setAiGenerating] = useState(false);
+  const handleGenerateAiCopy = async () => {
+    if (!aiPrompt.trim()) return;
+    setAiGenerating(true);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "campaign_copy",
+          channel,
+          topic: aiPrompt.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || "Failed to generate AI copy");
+      }
+      if (json.data?.body) {
+        setBody(json.data.body);
+      }
+      if (json.data?.subject && channel === "Email") {
+        setSubject(json.data.subject);
+      }
+      if (
+        Array.isArray(json.data?.suggestedButtons) &&
+        json.data.suggestedButtons.length > 0
+      ) {
+        setButtons(
+          json.data.suggestedButtons.slice(0, 3).map((text: string) => ({
+            text: text.slice(0, 25),
+            kind: "Quick reply" as const,
+            url: "",
+          }))
+        );
+      }
+      notify(`Generated with Claude (${json.model || "AWS Bedrock"})`);
+    } catch (err: unknown) {
+      notify(err instanceof Error ? err.message : "AI copy generation error");
+    } finally {
+      setAiGenerating(false);
+    }
+  };
   const open = (template: LocalTemplate | null) => {
     setBody(template?.body || "");
     setSubject(template?.subject || "");
     setMediaUrl(template?.mediaUrl || "");
     setButtons(structuredClone(template?.buttons || []));
     setCards(structuredClone(template?.cards || []));
+    setAiPrompt("");
     setEdit(template);
   };
   const person = s.contacts.find((c) => c.id === previewId) || s.contacts[0];
@@ -306,6 +351,39 @@ export default function Templates({
                 />
               </label>
             )}
+            <div className="console-ai-box">
+              <div className="console-ai-header">
+                <span className="console-ai-title">
+                  ✨ Claude AI Copywriter (AWS Bedrock)
+                </span>
+                <span className="console-ai-hint">
+                  Auto-generates high-converting {channel} copy & buttons
+                </span>
+              </div>
+              <div className="console-ai-row">
+                <input
+                  type="text"
+                  placeholder="e.g. Flash 50% weekend sale on premium electronics with free delivery"
+                  value={aiPrompt}
+                  maxLength={500}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleGenerateAiCopy();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={aiGenerating || !aiPrompt.trim()}
+                  onClick={handleGenerateAiCopy}
+                >
+                  {aiGenerating ? "Generating..." : "Generate with Claude"}
+                </button>
+              </div>
+            </div>
             <label>
               Message
               <textarea
