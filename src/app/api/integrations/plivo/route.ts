@@ -11,6 +11,7 @@ import {
 } from "@/lib/plivo-connection";
 import { phoneSchema } from "@/lib/voice";
 import { loadWorkspacePlivoCredentials } from "../../../../../services/voice/credentials";
+import { getAppUrl } from "@/lib/app-url";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -125,9 +126,7 @@ export async function POST(request: Request) {
     }
     if (!plivoStorageConfigured())
       throw new ApiError(503, "Secure credential storage is not configured.");
-    const app = new URL(
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    );
+    const app = new URL(getAppUrl());
     if (
       app.protocol !== "https:" &&
       !["localhost", "127.0.0.1"].includes(app.hostname)

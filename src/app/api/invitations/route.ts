@@ -8,6 +8,7 @@ import {
   requireSameOrigin,
   checkDb,
 } from "@/lib/auth";
+import { getAppUrl } from "@/lib/app-url";
 export async function POST(request: Request) {
   try {
     requireSameOrigin(request);
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       });
     return NextResponse.json(
       {
-        inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL}/invite?token=${token}`,
+        inviteUrl: `${getAppUrl()}/invite?token=${token}`,
         expiresInHours: 72,
       },
       { status: 201 },

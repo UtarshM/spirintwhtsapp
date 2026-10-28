@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getAppUrl } from "@/lib/app-url";
 import {
   features,
   solutions,
@@ -7,9 +8,7 @@ import {
   helpArticles,
 } from "@/lib/marketing/content";
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = (
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  ).replace(/\/$/, "");
+  const base = getAppUrl();
   const paths = [
     "",
     "/features",

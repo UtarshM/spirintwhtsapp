@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { userDb, adminDb, configured } from "./supabase";
+import { getAppUrl } from "./app-url";
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -36,12 +37,11 @@ export async function authorize(request: Request, admin = false) {
   }
   return { db, service: adminDb(), user, workspaceId, role: member.role };
 }
+
 export function requireSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return;
-  const expected = new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-  ).origin;
+  const expected = getAppUrl();
   if (
     origin === expected ||
     origin.startsWith("http://localhost:") ||

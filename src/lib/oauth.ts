@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { KMSClient, EncryptCommand } from "@aws-sdk/client-kms";
+import { getAppUrl } from "./app-url";
 export type MailProvider = "gmail" | "zoho";
 export function oauthConfig(provider: MailProvider) {
   const google = provider === "gmail";
@@ -25,7 +26,7 @@ export function oauthConfig(provider: MailProvider) {
     scopes: google
       ? "openid email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly"
       : "ZohoMail.accounts.READ,ZohoMail.messages.ALL",
-    callback: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/${provider}/callback`,
+    callback: `${getAppUrl()}/api/integrations/${provider}/callback`,
   };
 }
 export function oauthState() {

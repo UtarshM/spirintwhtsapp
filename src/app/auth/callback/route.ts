@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { userDb } from "@/lib/supabase";
+import { getAppUrl } from "@/lib/app-url";
 export async function GET(request: Request) {
   const u = new URL(request.url);
   const code = u.searchParams.get("code");
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(
         new URL(
           next?.startsWith("/account") ? next : "/account",
-          process.env.NEXT_PUBLIC_APP_URL || u.origin,
+          getAppUrl() || u.origin,
         ),
       );
     }

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { getMetadataBaseUrl } from "@/lib/app-url";
 import "./globals.css";
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  metadataBase: getMetadataBaseUrl(),
   title: "Sprint — Your next conversation, connected.",
   description: "WhatsApp, email and AI calling. One workspace, by Scalezix.",
 };

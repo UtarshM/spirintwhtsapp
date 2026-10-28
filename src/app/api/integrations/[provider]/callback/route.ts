@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { userDb, adminDb } from "@/lib/supabase";
 import { oauthConfig, encryptSecret } from "@/lib/oauth";
+import { getAppUrl } from "@/lib/app-url";
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const u = new URL(request.url);
-  const app = process.env.NEXT_PUBLIC_APP_URL || u.origin;
+  const app = getAppUrl() || u.origin;
   try {
     const { provider } = await params;
     if (provider !== "gmail" && provider !== "zoho") throw new Error();

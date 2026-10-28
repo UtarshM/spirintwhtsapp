@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { userDb, configured } from "@/lib/supabase";
 import { requireSameOrigin, apiError, ApiError } from "@/lib/auth";
+import { getAppUrl } from "@/lib/app-url";
 export async function POST(request: Request) {
   try {
     requireSameOrigin(request);
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
       );
     const { mode, email, password } = parsed.data;
     const db = await userDb();
-    const callback = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`;
+    const callback = `${getAppUrl()}/auth/callback`;
     if (mode !== "recover" && !password)
       throw new ApiError(422, "Password required");
     let error;
