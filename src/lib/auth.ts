@@ -13,9 +13,27 @@ export async function authorize(request: Request, admin = false) {
   if (!configured())
     throw new ApiError(503, "Workspace authentication is not configured");
   const db = await userDb();
-  const { data: authData, error } = await db.auth.getUser();
-  const user = authData?.user;
-  if (error || !user) throw new ApiError(401, "Sign in required");
+  let user = null;
+
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+    const jwt = authHeader.slice(7).trim();
+    if (jwt) {
+      const { data: jwtData, error: jwtErr } = await db.auth.getUser(jwt);
+      if (!jwtErr && jwtData?.user) {
+        user = jwtData.user;
+      }
+    }
+  }
+
+  if (!user) {
+    const { data: authData, error } = await db.auth.getUser();
+    if (!error && authData?.user) {
+      user = authData.user;
+    }
+  }
+
+  if (!user) throw new ApiError(401, "Sign in required");
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId || !/^[0-9a-f-]{36}$/i.test(workspaceId))
     throw new ApiError(400, "A valid x-workspace-id is required");
@@ -39,6 +57,20 @@ export async function authorize(request: Request, admin = false) {
 export function requireSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return;
+
+  const host =
+    request.headers.get("x-forwarded-host") || request.headers.get("host");
+  if (host) {
+    const proto = request.headers.get("x-forwarded-proto") || "https";
+    if (
+      origin === `${proto}://${host}` ||
+      origin === `https://${host}` ||
+      origin === `http://${host}`
+    ) {
+      return;
+    }
+  }
+
   const expected = getAppUrl();
   if (
     origin === expected ||
@@ -60,8 +92,25 @@ export function apiError(error: unknown) {
       { error: { message: "Invalid JSON" } },
       { status: 400 },
     );
+  if (error instanceof Error) {
+    if (
+      error.message === "server_not_configured" ||
+      error.message === "supabase_not_configured"
+    ) {
+      return NextResponse.json(
+        {
+          error: {
+            message:
+              "Database service is not configured. Verify SUPABASE_SERVICE_ROLE_KEY.",
+          },
+        },
+        { status: 503 },
+      );
+    }
+  }
   console.error("API operation failed", {
     type: error instanceof Error ? error.name : "unknown",
+    message: error instanceof Error ? error.message : "unknown",
   });
   return NextResponse.json(
     { error: { message: "The operation could not be completed" } },
