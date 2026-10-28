@@ -20,18 +20,22 @@ export default async function Page() {
         </section>
       </div>
     );
-  const db = await userDb();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-  if (!user) redirect("/login");
-  const { data } = await db
+  let db;
+  try {
+    db = await userDb();
+  } catch {
+    redirect("/login");
+  }
+  const { data: authData, error: authError } = await db.auth.getUser();
+  const user = authData?.user;
+  if (authError || !user) redirect("/login");
+  const { data: membershipData } = await db
     .from("memberships")
     .select("workspace_id,role")
     .eq("user_id", user.id)
     .limit(1);
-  if (!data?.[0]?.workspace_id) return <Account email={user.email || ""} />;
-  const workspaceId = data[0].workspace_id;
+  if (!membershipData?.[0]?.workspace_id) return <Account email={user.email || ""} />;
+  const workspaceId = membershipData[0].workspace_id;
   const { data: workspace } = await db
     .from("workspaces")
     .select("name")
@@ -46,9 +50,9 @@ export default async function Page() {
         userId: user.id,
         workspaceId,
         name: workspace?.name || "My workspace",
-        role: data[0].role,
+        role: membershipData[0].role,
         canEdit:
-          ["owner", "administrator"].includes(data[0].role) &&
+          ["owner", "administrator"].includes(membershipData[0].role) &&
           (assurance?.nextLevel !== "aal2" ||
             assurance?.currentLevel === "aal2"),
       }}

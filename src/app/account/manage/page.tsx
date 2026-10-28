@@ -18,11 +18,15 @@ export default async function Page() {
         </section>
       </div>
     );
-  const db = await userDb();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-  if (!user) redirect("/login");
+  let db;
+  try {
+    db = await userDb();
+  } catch {
+    redirect("/login");
+  }
+  const { data: authData, error: authError } = await db.auth.getUser();
+  const user = authData?.user;
+  if (authError || !user) redirect("/login");
   const { data } = await db
     .from("memberships")
     .select("workspace_id,role")

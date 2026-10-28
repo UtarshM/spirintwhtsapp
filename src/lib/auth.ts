@@ -13,10 +13,8 @@ export async function authorize(request: Request, admin = false) {
   if (!configured())
     throw new ApiError(503, "Workspace authentication is not configured");
   const db = await userDb();
-  const {
-    data: { user },
-    error,
-  } = await db.auth.getUser();
+  const { data: authData, error } = await db.auth.getUser();
+  const user = authData?.user;
   if (error || !user) throw new ApiError(401, "Sign in required");
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId || !/^[0-9a-f-]{36}$/i.test(workspaceId))

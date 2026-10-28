@@ -16,10 +16,9 @@ export async function GET(
       code = u.searchParams.get("code");
     if (!state || !code) throw new Error();
     const db = await userDb();
-    const {
-      data: { user },
-    } = await db.auth.getUser();
-    if (!user) throw new Error();
+    const { data: authData, error: authError } = await db.auth.getUser();
+    const user = authData?.user;
+    if (authError || !user) throw new Error();
     const service = adminDb();
     const hash = createHash("sha256").update(state).digest("hex");
     const { data: rows, error } = await service

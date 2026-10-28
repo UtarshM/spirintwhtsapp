@@ -6,10 +6,9 @@ export async function POST(request: Request) {
   try {
     requireSameOrigin(request);
     const db = await userDb();
-    const {
-      data: { user },
-    } = await db.auth.getUser();
-    if (!user) throw new ApiError(401, "Sign in required");
+    const { data: authData, error: authError } = await db.auth.getUser();
+    const user = authData?.user;
+    if (authError || !user) throw new ApiError(401, "Sign in required");
     const { name } = z
       .object({ name: z.string().trim().min(1).max(120) })
       .parse(await request.json());
