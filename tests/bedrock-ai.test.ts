@@ -82,3 +82,43 @@ test("runWhatsAppAgentReply triggers handoff when knowledge is empty and unconfi
     }
   }
 });
+
+test("generateCampaignCopy falls back gracefully when Bedrock throws an error", async () => {
+  const orig = process.env.BEDROCK_BEARER_TOKEN;
+  try {
+    // Set an invalid token so Bedrock API call will fail (e.g. 403 or network failure)
+    process.env.BEDROCK_BEARER_TOKEN = "invalid-token-to-trigger-fallback";
+    const res = await generateCampaignCopy({
+      channel: "WhatsApp",
+      topic: "Automated Outreach",
+    });
+    assert.ok(res.text.includes("Automated Outreach"));
+    assert.ok((res.suggestedButtons?.length ?? 0) > 0);
+  } finally {
+    if (orig !== undefined) {
+      process.env.BEDROCK_BEARER_TOKEN = orig;
+    } else {
+      delete process.env.BEDROCK_BEARER_TOKEN;
+    }
+  }
+});
+
+test("runWhatsAppAgentReply falls back gracefully when Bedrock throws an error", async () => {
+  const orig = process.env.BEDROCK_BEARER_TOKEN;
+  try {
+    process.env.BEDROCK_BEARER_TOKEN = "invalid-token-to-trigger-fallback";
+    const res = await runWhatsAppAgentReply({
+      inboundMessage: "Tell me about pricing details please",
+      knowledge: "Pricing details: Standard is ₹3,999/mo.",
+    });
+    assert.ok(res.reply.includes("Standard is ₹3,999/mo"));
+    assert.equal(res.requiresHandoff, false);
+  } finally {
+    if (orig !== undefined) {
+      process.env.BEDROCK_BEARER_TOKEN = orig;
+    } else {
+      delete process.env.BEDROCK_BEARER_TOKEN;
+    }
+  }
+});
+

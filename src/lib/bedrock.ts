@@ -137,7 +137,7 @@ export interface CampaignCopyResponse {
 export async function generateCampaignCopy(
   req: CampaignCopyRequest,
 ): Promise<CampaignCopyResponse> {
-  if (!isBedrockConfigured()) {
+  const fallbackCopy = (): CampaignCopyResponse => {
     const isWa = req.channel === "WhatsApp";
     const bodyText = isWa
       ? `Hi {{first_name}}, discover how ${req.topic} can accelerate your pipeline! Reply or click below for early access.`
@@ -154,6 +154,10 @@ export async function generateCampaignCopy(
         : [],
       suggestedButtons: isWa ? ["Book Walkthrough", "Learn More"] : [],
     };
+  };
+
+  if (!isBedrockConfigured()) {
+    return fallbackCopy();
   }
 
   const systemPrompt = `You are an elite B2B sales copywriter specializing in Indian and global B2B outreach across WhatsApp, cold email, and AI voice calls.
@@ -178,11 +182,17 @@ Language: ${req.language || "English (with natural Indian B2B tone)"}
 
 Write an outreach template with 1-2 recommended interactive buttons.`;
 
-  const raw = await invokeBedrockClaude({
-    prompt: userPrompt,
-    system: systemPrompt,
-    maxTokens: 1000,
-  });
+  let raw = "";
+  try {
+    raw = await invokeBedrockClaude({
+      prompt: userPrompt,
+      system: systemPrompt,
+      maxTokens: 1000,
+    });
+  } catch (err) {
+    console.warn("Bedrock campaign copy invocation failed, falling back to local template:", err);
+    return fallbackCopy();
+  }
 
   try {
     const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
@@ -227,7 +237,7 @@ export interface WhatsAppAgentReplyResponse {
 export async function runWhatsAppAgentReply(
   req: WhatsAppAgentReplyRequest,
 ): Promise<WhatsAppAgentReplyResponse> {
-  if (!isBedrockConfigured()) {
+  const fallbackReply = (): WhatsAppAgentReplyResponse => {
     const words = req.inboundMessage
       .toLowerCase()
       .split(/\W+/)
@@ -264,6 +274,10 @@ export async function runWhatsAppAgentReply(
       requiresHandoff: true,
       reason: "Knowledge base did not match query",
     };
+  };
+
+  if (!isBedrockConfigured()) {
+    return fallbackReply();
   }
 
   const systemPrompt = `You are "${req.agentName || "Sprint AI Agent"}", a knowledgeable, courteous, and proactive business assistant for WhatsApp.
@@ -290,11 +304,17 @@ Output format: Return strictly raw JSON:
   const prompt = `${history ? "Previous Messages:\n" + history + "\n\n" : ""}Latest Inbound Customer Message:
 "${req.inboundMessage}"`;
 
-  const raw = await invokeBedrockClaude({
-    prompt,
-    system: systemPrompt,
-    maxTokens: 500,
-  });
+  let raw = "";
+  try {
+    raw = await invokeBedrockClaude({
+      prompt,
+      system: systemPrompt,
+      maxTokens: 500,
+    });
+  } catch (err) {
+    console.warn("Bedrock WhatsApp agent reply failed, falling back to local knowledge base:", err);
+    return fallbackReply();
+  }
 
   try {
     const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
