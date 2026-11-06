@@ -140,7 +140,7 @@ export default function RapidMascot({
 
           {/* Antenna */}
           <rect x="48" y="4" width="4" height="10" rx="2" fill="#94a3b8" />
-          <circle cx="50" cy="4" r="5" fill="#f97316" />
+          <circle cx="50" cy="4" r="5" fill="#38bdf8" />
           <circle cx="50" cy="4" r="2.5" fill="#fed7aa" />
 
           {/* Eyeglasses Frame (White/Silver) */}

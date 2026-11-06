@@ -1,6 +1,6 @@
 import React from "react";
 
-export function RapidLogoIcon({ size = 32 }: { size?: number }) {
+export function LeadpilotLogoIcon({ size = 32 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -8,32 +8,46 @@ export function RapidLogoIcon({ size = 32 }: { size?: number }) {
       viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="rapid-logo-svg"
+      className="leadpilot-logo-svg"
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="rapidGrad1" x1="8" y1="12" x2="56" y2="36" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ff7828" />
-          <stop offset="1" stopColor="#ea580c" />
+        <linearGradient id="pilotGradMain" x1="6" y1="8" x2="58" y2="56" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#38bdf8" />
+          <stop offset="0.5" stopColor="#2563eb" />
+          <stop offset="1" stopColor="#1d4ed8" />
         </linearGradient>
-        <linearGradient id="rapidGrad2" x1="56" y1="52" x2="8" y2="28" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f97316" />
-          <stop offset="1" stopColor="#c2410c" />
+        <linearGradient id="pilotGradAccent" x1="20" y1="12" x2="48" y2="44" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#60a5fa" />
+          <stop offset="1" stopColor="#1e40af" />
         </linearGradient>
+        <filter id="pilotGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#2563eb" floodOpacity="0.35" />
+        </filter>
       </defs>
-      {/* Upper swoosh */}
+      {/* Dynamic Pilot Wings / Navigation Chevron */}
       <path
-        d="M12 28C10 20 16 12 28 12C44 12 54 22 50 32C47 39 37 42 32 38C26 33 34 24 40 24C44 24 46 27 44 30C41 34 32 35 25 32C17 28 14 36 12 28Z"
-        fill="url(#rapidGrad1)"
+        d="M32 6L54 28L44 32L32 18L20 32L10 28L32 6Z"
+        fill="url(#pilotGradMain)"
+        filter="url(#pilotGlow)"
       />
-      {/* Lower swoosh */}
       <path
-        d="M52 36C54 44 48 52 36 52C20 52 10 42 14 32C17 25 27 22 32 26C38 31 30 40 24 40C20 40 18 37 20 34C23 30 32 29 39 32C47 36 50 28 52 36Z"
-        fill="url(#rapidGrad2)"
+        d="M32 24L50 42L42 46L32 34L22 46L14 42L32 24Z"
+        fill="url(#pilotGradAccent)"
+        opacity="0.9"
+      />
+      {/* Propulsion Core */}
+      <circle cx="32" cy="46" r="5" fill="#38bdf8" />
+      <path
+        d="M32 51L36 58L28 58L32 51Z"
+        fill="#60a5fa"
+        opacity="0.8"
       />
     </svg>
   );
 }
+
+export { LeadpilotLogoIcon as RapidLogoIcon };
 
 export default function LeadpilotLogo({
   collapsed = false,
@@ -43,11 +57,11 @@ export default function LeadpilotLogo({
   size?: number;
 }) {
   return (
-    <div className={`rapid-sales-brand ${collapsed ? "collapsed" : ""}`}>
-      <RapidLogoIcon size={size} />
+    <div className={`leadpilot-brand ${collapsed ? "collapsed" : ""}`}>
+      <LeadpilotLogoIcon size={size} />
       {!collapsed && (
-        <span className="rapid-sales-brand-text">
-          Leadpilot
+        <span className="leadpilot-brand-text">
+          Lead<strong>pilot</strong>
         </span>
       )}
     </div>

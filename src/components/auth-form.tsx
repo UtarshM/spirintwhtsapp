@@ -1,14 +1,19 @@
 "use client";
 import { useState } from "react";
 import {
+  Sparkles,
+  Zap,
+  Bot,
+  ArrowRight,
   ShieldCheck,
+  Lock,
+  Mail,
   Eye,
   EyeOff,
-  Phone,
-  MessageSquare,
-  Target,
+  Radio,
+  CheckCircle2,
 } from "lucide-react";
-import RapidSalesLogo from "./console/rapid-logo";
+import LeadpilotLogo from "./console/rapid-logo";
 
 export default function AuthForm({
   mode,
@@ -20,94 +25,119 @@ export default function AuthForm({
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="login-layout">
-      {/* Leadpilot Left Story Hero */}
-      <aside className="login-story">
-        <div>
-          <a href="/" className="login-symbol" aria-label="Leadpilot Home">
-            <RapidSalesLogo size={32} />
-          </a>
-
-          <div className="login-story-copy">
-            <h2>Sales outreach that runs itself.</h2>
-            <p>AI agents that call, message and qualify your leads around the clock.</p>
+    <div className="leadpilot-auth-layout">
+      {/* Left Pilot Mission Control Visual */}
+      <aside className="leadpilot-hero-panel">
+        <div className="leadpilot-hero-content">
+          <div className="leadpilot-hero-top">
+            <a href="/" className="leadpilot-hero-logo" aria-label="Leadpilot Home">
+              <LeadpilotLogo size={34} />
+            </a>
+            <div className="leadpilot-status-badge">
+              <span className="leadpilot-status-dot" />
+              <span>PILOT ENGINE 2.4 LIVE</span>
+            </div>
           </div>
 
-          <div className="rapid-login-cards-list">
-            <div className="rapid-login-card">
-              <div className="rapid-login-card-icon">
-                <Phone size={18} />
+          <div className="leadpilot-hero-headline">
+            <span className="leadpilot-overline">
+              <Sparkles size={13} className="inline mr-1" />
+              AUTONOMOUS B2B REVENUE SYSTEM
+            </span>
+            <h2>Put your outreach on autopilot.</h2>
+            <p>
+              Multilingual AI voice callers, official WhatsApp Cloud API, and smart tri-channel sequences working around the clock to qualify your pipeline.
+            </p>
+          </div>
+
+          {/* Live Mission Card (Unique to Leadpilot) */}
+          <div className="leadpilot-mission-card">
+            <div className="leadpilot-mission-header">
+              <div className="leadpilot-mission-agent">
+                <div className="leadpilot-agent-avatar">
+                  <Bot size={18} />
+                </div>
+                <div>
+                  <strong>Aarav · Senior AI Calling Specialist</strong>
+                  <span>Auto-qualifying inbound & cold leads</span>
+                </div>
               </div>
-              <div>
-                <strong>1,000+ AI calls a day</strong>
-                <p>Natural-sounding agents in English and Indian languages.</p>
+              <span className="leadpilot-live-tag">
+                <Radio size={12} className="leadpilot-live-pulse" />
+                Live Call
+              </span>
+            </div>
+
+            <div className="leadpilot-metrics-strip">
+              <div className="leadpilot-metric-col">
+                <span className="leadpilot-metric-num">1,500+</span>
+                <span className="leadpilot-metric-lbl">Daily AI Waves</span>
+              </div>
+              <div className="leadpilot-metric-col">
+                <span className="leadpilot-metric-num">&lt; 1.2s</span>
+                <span className="leadpilot-metric-lbl">Voice Latency</span>
+              </div>
+              <div className="leadpilot-metric-col">
+                <span className="leadpilot-metric-num">82%</span>
+                <span className="leadpilot-metric-lbl">Qualified Match</span>
               </div>
             </div>
 
-            <div className="rapid-login-card">
-              <div className="rapid-login-card-icon">
-                <MessageSquare size={18} />
-              </div>
-              <div>
-                <strong>Email, WhatsApp and calling together</strong>
-                <p>One sequence across every channel your leads use.</p>
-              </div>
-            </div>
-
-            <div className="rapid-login-card">
-              <div className="rapid-login-card-icon">
-                <Target size={18} />
-              </div>
-              <div>
-                <strong>Qualified leads, automatically</strong>
-                <p>Every reply is classified and routed to the right next step.</p>
-              </div>
+            <div className="leadpilot-live-event">
+              <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+              <span>Real Estate Lead qualified in 42s · WhatsApp dossier dispatched instantly</span>
             </div>
           </div>
         </div>
 
-        <div className="login-story-footer-bar">
-          <span>Trusted by 500+ businesses</span>
-          <span>© {new Date().getFullYear()} Leadpilot</span>
+        <div className="leadpilot-hero-footer">
+          <div className="leadpilot-trust-points">
+            <span>🛡️ Meta Cloud API Verified</span>
+            <span>⚡ Multi-Tenant Quarantine</span>
+            <span>🇮🇳 Built for Indian MSMEs & Global SaaS</span>
+          </div>
+          <span className="leadpilot-copy-notice">© {new Date().getFullYear()} Leadpilot</span>
         </div>
       </aside>
 
-      {/* Right Form Side */}
-      <section className="login-form-side">
-        <div className="login-signup-prompt">
-          {mode === "signup" ? (
-            <>
-              Already have an account? <a href="/login">Sign in</a>
-            </>
-          ) : mode === "recover" ? (
-            <>
-              Remembered your password? <a href="/login">Sign in</a>
-            </>
-          ) : (
-            <>
-              No account? <a href="/signup">Sign up</a>
-            </>
-          )}
+      {/* Right Modern Form Panel */}
+      <section className="leadpilot-form-panel">
+        <div className="leadpilot-form-topbar">
+          <span className="leadpilot-form-switch-text">
+            {mode === "signup" ? "Already have a Leadpilot workspace?" : mode === "recover" ? "Remember your credentials?" : "New to Leadpilot?"}
+          </span>
+          <a
+            href={mode === "signup" || mode === "recover" ? "/login" : "/signup"}
+            className="leadpilot-form-switch-btn"
+          >
+            {mode === "signup" || mode === "recover" ? "Sign in" : "Create Workspace"}
+          </a>
         </div>
 
-        <div className="login-form-inner">
-          <h1>
-            {mode === "login"
-              ? "Welcome back"
-              : mode === "signup"
-                ? "Create your workspace"
-                : "Reset your password"}
-          </h1>
-
-          <p>
-            {mode === "login"
-              ? "Sign in to your Leadpilot workspace."
-              : mode === "signup"
-                ? "Start automating your outreach across WhatsApp, Email & AI Calls."
-                : "We'll email you a secure link to reset your password."}
-          </p>
+        <div className="leadpilot-form-container">
+          <div className="leadpilot-form-header">
+            <span className="leadpilot-form-badge">
+              <Zap size={12} />
+              WORKSPACE CONSOLE ACCESS
+            </span>
+            <h1>
+              {mode === "login"
+                ? "Welcome back"
+                : mode === "signup"
+                  ? "Launch your workspace"
+                  : "Reset access"}
+            </h1>
+            <p>
+              {mode === "login"
+                ? "Enter your verified business credentials to access your sales console."
+                : mode === "signup"
+                  ? "Spin up your autonomous sales workspace in 60 seconds with 500 trial credits."
+                  : "We'll send you an encrypted recovery link to restore workspace access."}
+            </p>
+          </div>
 
           <form
+            className="leadpilot-auth-form"
             onSubmit={async (e) => {
               e.preventDefault();
               setBusy(true);
@@ -141,131 +171,138 @@ export default function AuthForm({
                 });
                 const data = await res.json();
                 if (!res.ok) {
-                  setStatus(data.error?.message || "Could not complete request");
+                  setStatus(data.error?.message || "Authentication failed");
                   return;
                 }
                 if (mode === "login" || mode === "signup") {
                   location.href = "/dashboard#overview";
                 } else {
-                  setStatus("Check your email for the confirmation link.");
+                  setStatus("Password reset instructions sent to your email.");
                 }
               } catch {
-                setStatus("Connection failed. Please try again.");
+                setStatus("Connection error. Please try again.");
               } finally {
                 setBusy(false);
               }
             }}
           >
             {mode === "signup" && (
-              <>
-                <label>
-                  Full name
+              <div className="leadpilot-input-grid">
+                <label className="leadpilot-field">
+                  <span className="leadpilot-field-label">Full Name</span>
                   <input
                     name="fullName"
                     type="text"
                     required
                     maxLength={100}
                     placeholder="e.g. Rahul Verma"
+                    className="leadpilot-text-input"
                   />
                 </label>
-                <label>
-                  Company / Startup name
+                <label className="leadpilot-field">
+                  <span className="leadpilot-field-label">Company / Startup Name</span>
                   <input
                     name="companyName"
                     type="text"
                     required
                     maxLength={120}
-                    placeholder="e.g. Apex Logistics Pvt Ltd"
+                    placeholder="e.g. Apex Technologies Pvt Ltd"
+                    className="leadpilot-text-input"
                   />
                 </label>
-              </>
+              </div>
             )}
 
-            <label>
-              Work email
-              <input
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                placeholder="you@company.com"
-              />
+            <label className="leadpilot-field">
+              <span className="leadpilot-field-label">Business Work Email</span>
+              <div className="leadpilot-input-wrapper">
+                <Mail size={16} className="leadpilot-input-icon" />
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="name@company.com"
+                  className="leadpilot-text-input has-icon"
+                />
+              </div>
             </label>
 
             {mode !== "recover" && (
-              <label>
-                <div className="login-password-header">
-                  <span>Password</span>
+              <label className="leadpilot-field">
+                <div className="leadpilot-field-header">
+                  <span className="leadpilot-field-label">Secure Password</span>
                   {mode === "login" && (
-                    <a href="/recover" className="login-forgot-link">
+                    <a href="/recover" className="leadpilot-forgot-link">
                       Forgot password?
                     </a>
                   )}
                 </div>
-                <span className="login-password">
+                <div className="leadpilot-input-wrapper">
+                  <Lock size={16} className="leadpilot-input-icon" />
                   <input
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
+                    placeholder="••••••••••••"
                     required
                     minLength={mode === "signup" ? 8 : undefined}
-                    autoComplete={
-                      mode === "login" ? "current-password" : "new-password"
-                    }
+                    autoComplete={mode === "login" ? "current-password" : "new-password"}
+                    className="leadpilot-text-input has-icon has-trailing"
                   />
                   <button
                     type="button"
                     aria-label={showPassword ? "Hide password" : "Show password"}
-                    aria-pressed={showPassword}
-                    onClick={() => setShowPassword((value) => !value)}
+                    className="leadpilot-toggle-password"
+                    onClick={() => setShowPassword((v) => !v)}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
-                </span>
+                </div>
                 {mode === "signup" && (
-                  <small style={{ color: "#64748b", marginTop: "4px" }}>
-                    Use at least 8 characters with numbers & symbols.
-                  </small>
+                  <span className="leadpilot-field-hint">
+                    Minimum 8 characters with numbers & special symbols.
+                  </span>
                 )}
               </label>
             )}
 
             {mode === "login" && (
-              <label className="login-checkbox-row">
+              <label className="leadpilot-checkbox-label">
                 <input type="checkbox" defaultChecked name="remember" />
-                <span>Keep me signed in</span>
+                <span>Keep workspace session active on this browser</span>
               </label>
             )}
 
-            <button type="submit" className="login-submit-btn" disabled={busy}>
-              {busy
-                ? "Connecting…"
-                : mode === "login"
-                  ? "Sign in"
-                  : mode === "signup"
-                    ? "Create Workspace"
-                    : "Send Recovery Link"}
+            <button type="submit" className="leadpilot-primary-btn" disabled={busy}>
+              <span>
+                {busy
+                  ? "Authenticating…"
+                  : mode === "login"
+                    ? "Sign in to Console"
+                    : mode === "signup"
+                      ? "Create Free Workspace"
+                      : "Send Reset Link"}
+              </span>
+              <ArrowRight size={16} />
             </button>
           </form>
 
           {status && (
-            <div className="notice" role="status" style={{ marginTop: 16 }}>
+            <div className="leadpilot-alert-banner" role="status">
               <ShieldCheck size={17} />
-              {status}
+              <span>{status}</span>
             </div>
           )}
 
-          <div className="login-terms-notice">
-            By signing in you agree to our{" "}
-            <a href="/terms-and-conditions">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="/privacy-policy">
-              Privacy Policy
-            </a>
-            .
+          <div className="leadpilot-security-badge">
+            <span>🔒 256-Bit SSL Encrypted · Multi-Tenant Quarantine</span>
           </div>
+
+          <p className="leadpilot-legal-footer">
+            By accessing Leadpilot, you agree to our{" "}
+            <a href="/terms-and-conditions">Terms of Service</a> and{" "}
+            <a href="/privacy-policy">Privacy Policy</a>.
+          </p>
         </div>
       </section>
     </div>

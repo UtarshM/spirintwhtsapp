@@ -1750,12 +1750,12 @@
 /* Dashboard nav item highlight */
 .rapid-dashboard-nav-item.active {
   background: #1e293b !important;
-  color: #f97316 !important;
+  color: #38bdf8 !important;
   font-weight: 600;
-  border: 1px solid rgba(249, 115, 22, 0.3);
+  border: 1px solid rgba(56, 189, 248, 0.35);
 }
 .rapid-dashboard-nav-icon {
-  color: #f97316 !important;
+  color: #38bdf8 !important;
 }
 
 /* User Profile card at bottom of sidebar */
@@ -1777,7 +1777,7 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #f97316;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #ffffff;
   display: grid;
   place-items: center;
@@ -2686,8 +2686,8 @@
   border-color: #cbd5e1;
 }
 .rapid-mascot-action-btn.primary {
-  background: #f97316;
-  border-color: #f97316;
+  background: #2563eb;
+  border-color: #2563eb;
   color: #ffffff;
   justify-content: center;
   gap: 6px;
@@ -2699,7 +2699,7 @@
   position: fixed;
   right: 24px;
   bottom: 24px;
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #ffffff;
   border: 0;
   border-radius: 28px;
@@ -2709,14 +2709,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.4);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
   cursor: pointer;
   z-index: 90;
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .rapid-floating-setup-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.5);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
 }
 
 /* =========================================================================
@@ -2807,7 +2807,7 @@
 }
 .setup-guide-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #f97316, #22c55e);
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
   border-radius: 4px;
   transition: width 0.3s;
 }
@@ -3131,16 +3131,16 @@
   background: #f8fafc;
 }
 .credit-pack-card.selected {
-  border-color: #f97316;
-  background: #fff7ed;
-  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 .credit-pack-badge {
   position: absolute;
   top: -8px;
   left: 50%;
   transform: translateX(-50%);
-  background: #f97316;
+  background: #2563eb;
   color: #ffffff;
   font-size: 8px;
   font-weight: 700;
@@ -3166,7 +3166,7 @@
 }
 .credit-pack-bonus {
   font-size: 9px;
-  color: #ea580c;
+  color: #2563eb;
   margin-top: 4px;
   display: flex;
   align-items: center;
