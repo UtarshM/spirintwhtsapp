@@ -2765,50 +2765,45 @@ label, th { font-size: 13px; }
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
 
-/* Split account entry layout. */
-.login-layout { display:grid; grid-template-columns:minmax(360px,43%) 1fr; min-height:100dvh; background:#fff; }
-.login-story { background:#eaf5f1; padding:48px 48px 32px; display:flex; flex-direction:column; overflow:hidden; }
-.login-symbol { display:grid; place-items:center; width:52px; height:52px; color:#fff; background:#104e48; border-radius:16px; transform:rotate(-7deg); }
-.login-story-copy { margin-top:52px; max-width:460px; }
-.login-overline { display:block; color:#64746f; font-size:12px; font-weight:650; letter-spacing:1.5px; margin-bottom:16px; }
-.login-story h2 { color:#104e48; font-size:clamp(30px,3vw,44px); line-height:1.25; letter-spacing:-1.4px; font-weight:750; }
-.login-story-copy p { margin-top:20px; color:#526e67; font-size:16px; line-height:1.7; max-width:380px; }
-.login-illustration { min-height:330px; position:relative; display:grid; place-items:center; flex:1; margin:20px -15px; }
-.login-orbit { position:absolute; width:340px; height:340px; border:1px dashed #bfd8cf; border-radius:50%; transform:rotate(-20deg); }
-.login-orbit.inner { width:255px; height:255px; border-style:solid; border-color:#d5e6df; }
-.login-message-card { position:relative; background:#fff; border:1px solid #d5e7df; border-radius:18px; padding:22px; width:330px; max-width:95%; box-shadow:0 20px 60px #104e4810; transform:rotate(-4deg); }
-.login-message-top { display:flex; align-items:center; gap:10px; margin-bottom:28px; }
-.login-contact-icon { display:grid; place-items:center; width:38px; height:38px; border-radius:12px; background:#e8f5ef; color:#21866c; flex-shrink:0; }
-.login-message-top strong { font-size:13px; color:#21473e; }
-.login-message-top small { font-size:10px; margin-top:4px; }
-.login-message-top i { margin-left:auto; background:#57ae89; width:6px; height:6px; border-radius:50%; }
-.login-bubble { background:#f0f4f3; color:#435f56; padding:13px 15px; border-radius:12px 12px 12px 2px; font-size:13px; width:max-content; max-width:100%; }
-.login-bubble.reply { background:#dff2e8; margin:14px 0 28px auto; border-radius:12px 12px 2px 12px; display:flex; gap:8px; align-items:center; }
-.login-message-bottom { border-top:1px solid #eef3f0; padding-top:16px; display:flex; align-items:center; justify-content:space-between; color:#60766e; font-size:11px; }
-.login-floating { position:absolute; display:flex; align-items:center; justify-content:center; background:#fff; border:1px solid #deebe5; box-shadow:0 8px 20px #104e480a; border-radius:15px; width:58px; height:58px; color:#268c72; }
-.login-floating.mail { right:0; top:12%; transform:rotate(12deg); }
-.login-floating.phone { left:0; bottom:14%; transform:rotate(-12deg); }
-.login-floating.connected { width:auto; height:auto; padding:12px 15px; border-radius:10px; right:0; bottom:7%; font-size:11px; gap:8px; color:#396354; }
-.login-story-footer { display:flex; align-items:center; justify-content:center; gap:22px; color:#526e67; font-size:14px; padding-top:24px; }
-.login-story-footer i { width:4px; height:4px; background:#88afa0; border-radius:50%; }
-.login-form-side { position:relative; display:flex; align-items:center; justify-content:center; padding:110px 55px 70px; }
-.login-signup-prompt { position:absolute; top:42px; right:48px; font-size:14px; color:#64748b; }
-.login-signup-prompt a { color:#115e52; font-weight:600; margin-left:6px; }
-.login-form-inner { width:100%; max-width:430px; }
-.login-form-inner h1 { font-size:32px; line-height:1.25; letter-spacing:-1px; color:#152b25; }
-.login-form-inner > p { font-size:15px; color:#64746f; margin-top:14px; }
-.login-form-inner form { margin-top:38px; }
-.login-form-inner label { font-size:14px; margin-bottom:24px; color:#30483e; font-weight:550; }
-.login-form-inner input { width:100%; padding:16px; border:1.5px solid #cbd7d2; border-radius:8px; font-size:16px; min-height:56px; }
-.login-form-inner input:focus-visible { outline-color:#2d8c75; }
+/* Split account entry layout - RapidSales Style */
+.login-layout { display:grid; grid-template-columns:minmax(380px,45%) 1fr; min-height:100dvh; background:#fff; }
+.login-story { background:#0f172a; color:#f8fafc; padding:48px 48px 32px; display:flex; flex-direction:column; overflow:hidden; }
+.login-symbol { display:flex; align-items:center; text-decoration:none; }
+.login-story-copy { margin-top:40px; max-width:460px; }
+.login-overline { display:block; color:#f97316; font-size:11px; font-weight:700; letter-spacing:1.5px; margin-bottom:12px; }
+.login-story h2 { color:#ffffff; font-size:clamp(28px,3vw,40px); line-height:1.25; letter-spacing:-1px; font-weight:750; }
+.login-story-copy p { margin-top:14px; color:#94a3b8; font-size:15px; line-height:1.6; }
+.rapid-login-cards-list { display:flex; flex-direction:column; gap:16px; margin:40px 0 auto; }
+.rapid-login-card { display:flex; align-items:flex-start; gap:14px; background:#1e293b; border:1px solid #334155; border-radius:12px; padding:16px; }
+.rapid-login-card-icon { width:36px; height:36px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; }
+.rapid-login-card-icon.phone { background:#fff7ed; color:#ea580c; }
+.rapid-login-card-icon.whatsapp { background:#ecfdf5; color:#16a34a; }
+.rapid-login-card-icon.leads { background:#faf5ff; color:#9333ea; }
+.rapid-login-card strong { display:block; font-size:14px; font-weight:600; color:#f8fafc; margin-bottom:3px; }
+.rapid-login-card p { font-size:12px; color:#94a3b8; margin:0; line-height:1.4; }
+.rapid-login-trust { display:flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; margin-top:24px; }
+.login-story-footer { display:flex; align-items:center; gap:16px; color:#64748b; font-size:12px; padding-top:24px; border-top:1px solid #1e293b; }
+.login-story-footer i { width:3px; height:3px; background:#475569; border-radius:50%; }
+.login-form-side { position:relative; display:flex; align-items:center; justify-content:center; padding:100px 50px 60px; background:#ffffff; }
+.login-signup-prompt { position:absolute; top:36px; right:40px; font-size:13px; color:#64748b; }
+.login-signup-prompt a { color:#ea580c; font-weight:600; margin-left:6px; }
+.login-form-inner { width:100%; max-width:420px; }
+.login-form-inner h1 { font-size:30px; line-height:1.2; letter-spacing:-0.8px; color:#0f172a; margin-top:8px; }
+.login-form-inner > p { font-size:14px; color:#64748b; margin-top:8px; }
+.login-form-inner form { margin-top:32px; display:flex; flex-direction:column; gap:18px; }
+.login-form-inner label { font-size:13px; color:#334155; font-weight:600; display:flex; flex-direction:column; gap:6px; }
+.login-form-inner input[type="email"],
+.login-form-inner input[type="password"],
+.login-form-inner input[type="text"] { width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; color:#0f172a; }
+.login-form-inner input:focus-visible { outline:2px solid #f97316; outline-offset:1px; }
 .login-password { position:relative; display:block; }
-.login-password input { padding-right:54px; }
-.login-password button { position:absolute; right:8px; top:8px; width:40px; height:40px; display:grid; place-items:center; border-radius:6px; color:#64776e; }
-.login-password button:hover { background:#eef5f1; }
-.login-form-inner .primary { width:100%; min-height:54px; background:#145e50; font-size:16px; border-radius:8px; }
-.login-form-inner .primary:hover { background:#104c41; }
-.login-bottom-links { text-align:center; margin-top:26px; color:#145e50; font-size:14px; }
-.login-home-link { display:block; text-align:center; color:#687b72; font-size:13px; margin-top:48px; }
-@media(min-width:1500px) { .login-story { padding:60px 70px 40px; } .login-form-inner { max-width:480px; } .login-illustration { max-height:430px; margin-top:35px; } }
-@media(max-width:1000px) { .login-story { padding:32px 28px; } .login-form-side { padding-inline:35px; } .login-story-copy { margin-top:40px; } .login-floating { display:none; } .login-message-card { width:290px; padding:18px; } }
-@media(max-width:760px) { .login-layout { grid-template-columns:1fr; } .login-story { padding:24px; } .login-symbol { width:42px; height:42px; border-radius:12px; } .login-story-copy { margin-top:24px; } .login-story h2 { font-size:30px; } .login-story h2 br { display:none; } .login-story-copy p,.login-illustration,.login-story-footer { display:none; } .login-form-side { padding:85px 24px 36px; align-items:flex-start; } .login-signup-prompt { top:28px; right:24px; font-size:13px; } .login-form-inner { max-width:480px; } .login-form-inner h1 { font-size:28px; } .login-home-link { margin-top:35px; } }
+.login-password input { padding-right:48px !important; }
+.login-password button { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:32px; height:32px; display:grid; place-items:center; border:0; background:transparent; border-radius:6px; color:#64748b; cursor:pointer; }
+.login-password button:hover { color:#0f172a; }
+.login-form-inner .primary { width:100%; min-height:46px; background:#ea580c; color:#ffffff; font-size:14px; font-weight:600; border-radius:8px; border:0; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; transition:background 0.15s; }
+.login-form-inner .primary:hover { background:#c2410c; }
+.login-bottom-links { text-align:center; margin-top:20px; color:#ea580c; font-size:13px; }
+.login-home-link { display:block; text-align:center; color:#64748b; font-size:13px; margin-top:32px; }
+@media(min-width:1500px) { .login-story { padding:60px 70px 40px; } .login-form-inner { max-width:460px; } }
+@media(max-width:1000px) { .login-story { padding:32px 28px; } .login-form-side { padding-inline:30px; } .rapid-login-cards-list { margin:24px 0; } }
+@media(max-width:760px) { .login-layout { grid-template-columns:1fr; } .login-story { padding:24px; } .login-story h2 { font-size:26px; } .rapid-login-cards-list { display:none; } .login-story-footer { display:none; } .login-form-side { padding:70px 24px 36px; align-items:flex-start; } .login-signup-prompt { top:24px; right:24px; font-size:12px; } .login-form-inner { max-width:100%; } .login-form-inner h1 { font-size:26px; } }

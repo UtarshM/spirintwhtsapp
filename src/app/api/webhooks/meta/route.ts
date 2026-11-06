@@ -46,6 +46,12 @@ export async function POST(request: Request) {
         { onConflict: "provider,event_id", ignoreDuplicates: true },
       );
     if (error) throw error;
+    try {
+      const { processMetaEvents } = await import("../../../../../services/worker/meta-events");
+      processMetaEvents().catch(() => {});
+    } catch {
+      // If service worker isn't synchronously available, next run will process it
+    }
     return NextResponse.json({ received: true });
   } catch {
     return new Response("Event persistence failed", { status: 500 });

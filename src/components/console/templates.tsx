@@ -113,10 +113,12 @@ export default function Templates({
   channel,
   notify,
 }: {
-  channel: Channel;
+  channel?: Channel;
   notify: (s: string) => void;
 }) {
   const { state: s, update } = useWorkspace();
+  const [activeChannelTab, setActiveChannelTab] = useState<Channel | "All">(channel || "All");
+  const [modalChannel, setModalChannel] = useState<Channel>(channel || "WhatsApp");
   const [edit, setEdit] = useState<LocalTemplate | null | undefined>(),
     [body, setBody] = useState(""),
     [subject, setSubject] = useState(""),
@@ -127,6 +129,9 @@ export default function Templates({
     [query, setQuery] = useState(""),
     [aiPrompt, setAiPrompt] = useState(""),
     [aiGenerating, setAiGenerating] = useState(false);
+
+  const effectiveChannel = edit?.channel || modalChannel;
+
   const handleGenerateAiCopy = async () => {
     if (!aiPrompt.trim()) return;
     setAiGenerating(true);
@@ -136,7 +141,7 @@ export default function Templates({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "campaign_copy",
-          channel,
+          channel: effectiveChannel,
           topic: aiPrompt.trim(),
         }),
       });
@@ -147,7 +152,7 @@ export default function Templates({
       if (json.data?.body) {
         setBody(json.data.body);
       }
-      if (json.data?.subject && channel === "Email") {
+      if (json.data?.subject && effectiveChannel === "Email") {
         setSubject(json.data.subject);
       }
       if (
@@ -169,7 +174,9 @@ export default function Templates({
       setAiGenerating(false);
     }
   };
+
   const open = (template: LocalTemplate | null) => {
+    setModalChannel(template?.channel || (activeChannelTab === "All" ? "WhatsApp" : activeChannelTab));
     setBody(template?.body || "");
     setSubject(template?.subject || "");
     setMediaUrl(template?.mediaUrl || "");
@@ -178,11 +185,12 @@ export default function Templates({
     setAiPrompt("");
     setEdit(template);
   };
+
   const person = s.contacts.find((c) => c.id === previewId) || s.contacts[0];
   const draft: LocalTemplate = {
     id: edit?.id || "preview",
     name: edit?.name || "Preview",
-    channel,
+    channel: effectiveChannel,
     subject,
     body,
     mediaUrl,
@@ -197,79 +205,146 @@ export default function Templates({
     setCards((current) =>
       current.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     );
+
+  const totalTemplates = s.templates.length;
+  const waTemplates = s.templates.filter((t) => t.channel === "WhatsApp").length;
+  const emailTemplates = s.templates.filter((t) => t.channel === "Email").length;
+  const readyTemplates = s.templates.filter((t) => t.status === "Ready").length;
+
+  const filteredTemplates = s.templates.filter(
+    (t) =>
+      (activeChannelTab === "All" || t.channel === activeChannelTab) &&
+      t.name.toLowerCase().includes(query.toLowerCase()),
+  );
+
   return (
     <Panel
-      title={`${channel} templates`}
-      description="Reusable content and rich previews. Ready is local readiness; provider approval has not been checked."
+      title={activeChannelTab === "All" ? "Omnichannel Templates" : `${activeChannelTab} Templates`}
+      description="Design, preview, and manage multi-channel message and email templates with AI copy generation."
       action={
         <button className="primary" onClick={() => open(null)}>
-          Create template
+          Create Template
         </button>
       }
     >
-      <SearchBox
-        value={query}
-        onChange={setQuery}
-        placeholder="Search templates"
-      />
+      {/* Top Stat Cards */}
+      <div className="rapid-stat-cards-grid" style={{ marginBottom: 20 }}>
+        <div className="rapid-stat-card">
+          <span className="rapid-stat-label">TOTAL TEMPLATES</span>
+          <div className="rapid-stat-value">{totalTemplates}</div>
+          <span className="rapid-stat-sub">Across all outreach channels</span>
+        </div>
+        <div className="rapid-stat-card">
+          <span className="rapid-stat-label">WHATSAPP TEMPLATES</span>
+          <div className="rapid-stat-value" style={{ color: "#059669" }}>{waTemplates}</div>
+          <span className="rapid-stat-sub">HSM marketing & utilities</span>
+        </div>
+        <div className="rapid-stat-card">
+          <span className="rapid-stat-label">EMAIL TEMPLATES</span>
+          <div className="rapid-stat-value" style={{ color: "#2563eb" }}>{emailTemplates}</div>
+          <span className="rapid-stat-sub">HTML newsletters & cold outreach</span>
+        </div>
+        <div className="rapid-stat-card">
+          <span className="rapid-stat-label">READY / APPROVED</span>
+          <div className="rapid-stat-value" style={{ color: "#7c3aed" }}>{readyTemplates}</div>
+          <span className="rapid-stat-sub">Validated for live dispatch</span>
+        </div>
+      </div>
+
+      {/* Filter and Tab Bar */}
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[
+            { id: "All", label: `All (${totalTemplates})` },
+            { id: "WhatsApp", label: `WhatsApp (${waTemplates})` },
+            { id: "Email", label: `Email (${emailTemplates})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={activeChannelTab === tab.id ? "primary" : "secondary"}
+              style={{ padding: "6px 14px", fontSize: 13, borderRadius: 20 }}
+              onClick={() => setActiveChannelTab(tab.id as Channel | "All")}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          placeholder="Search templates..."
+        />
+      </div>
+
       <div className="console-card-grid">
-        {s.templates
-          .filter(
-            (t) =>
-              t.channel === channel &&
-              t.name.toLowerCase().includes(query.toLowerCase()),
-          )
-          .map((template) => (
-            <article className="console-mini-card" key={template.id}>
+        {filteredTemplates.map((template) => (
+          <article className="console-mini-card" key={template.id}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "2px 8px",
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  background: template.channel === "WhatsApp" ? "#ecfdf5" : "#eff6ff",
+                  color: template.channel === "WhatsApp" ? "#059669" : "#2563eb",
+                }}
+              >
+                {template.channel}
+              </span>
               <Badge>
                 {template.status} · Local{" "}
-                {channel === "WhatsApp" ? `· ${template.category}` : ""}
+                {template.channel === "WhatsApp" ? `· ${template.category}` : ""}
               </Badge>
-              <h3>{template.name}</h3>
-              <TemplatePreview
-                content={
-                  s.contacts[0]
-                    ? personalizeTemplate(template, s.contacts[0])
-                    : template
-                }
-              />
-              <div className="console-actions">
-                <button className="secondary" onClick={() => open(template)}>
-                  Edit & preview
-                </button>
-                <button
-                  className="secondary"
-                  onClick={() => {
-                    if (
-                      update((state) => ({
-                        ...state,
-                        templates: [
-                          ...state.templates,
-                          {
-                            ...structuredClone(template),
-                            id: uid(),
-                            name: template.name + " copy",
-                            status: "Draft",
-                            updatedAt: now(),
-                          },
-                        ],
-                      }))
-                    )
-                      notify("Template duplicated");
-                  }}
-                >
-                  Duplicate
-                </button>
-              </div>
-            </article>
-          ))}
+            </div>
+            <h3>{template.name}</h3>
+            <TemplatePreview
+              content={
+                s.contacts[0]
+                  ? personalizeTemplate(template, s.contacts[0])
+                  : template
+              }
+            />
+            <div className="console-actions">
+              <button className="secondary" onClick={() => open(template)}>
+                Edit & preview
+              </button>
+              <button
+                className="secondary"
+                onClick={() => {
+                  if (
+                    update((state) => ({
+                      ...state,
+                      templates: [
+                        ...state.templates,
+                        {
+                          ...structuredClone(template),
+                          id: uid(),
+                          name: template.name + " copy",
+                          status: "Draft",
+                          updatedAt: now(),
+                        },
+                      ],
+                    }))
+                  )
+                    notify("Template duplicated");
+                }}
+              >
+                Duplicate
+              </button>
+            </div>
+          </article>
+        ))}
       </div>
-      {!s.templates.some((t) => t.channel === channel) && (
-        <Empty>Create your first local template.</Empty>
+      {!filteredTemplates.length && (
+        <Empty>No templates found for this channel. Click &quot;Create Template&quot; to build one.</Empty>
       )}
       {edit !== undefined && (
         <Modal
-          title={`${channel} template editor`}
+          title={`${effectiveChannel} template editor`}
           close={() => setEdit(undefined)}
         >
           <form
@@ -280,6 +355,7 @@ export default function Templates({
                 ...draft,
                 id: edit?.id || uid(),
                 name: formValue(f, "name"),
+                channel: effectiveChannel,
                 category: (formValue(f, "category") ||
                   "Marketing") as LocalTemplate["category"],
                 status: formValue(f, "status") as "Draft" | "Ready",
@@ -298,17 +374,29 @@ export default function Templates({
                 update((state) => ({
                   ...state,
                   templates: edit
-                    ? state.templates.map((t) =>
-                        t.id === edit.id ? template : t,
+                    ? state.templates.map((x) =>
+                        x.id === template.id ? template : x,
                       )
                     : [...state.templates, template],
                 }))
               ) {
+                notify("Template saved");
                 setEdit(undefined);
-                notify("Rich template saved locally");
               }
             }}
           >
+            {!edit && (
+              <label>
+                Channel
+                <select
+                  value={modalChannel}
+                  onChange={(e) => setModalChannel(e.target.value as Channel)}
+                >
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Email">Email</option>
+                </select>
+              </label>
+            )}
             <div className="console-form-grid">
               <label>
                 Template name

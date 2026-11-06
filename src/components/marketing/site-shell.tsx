@@ -44,14 +44,13 @@ export function ProductIcon({
 }
 export function Logo() {
   return (
-    <Link href="/" className="site-logo" aria-label="Sprint by Scalezix home">
+    <Link href="/" className="site-logo" aria-label="Sprint home">
       <span>
-        <SalesMark size={25} />
+        <SalesMark size={28} />
       </span>
-      <strong>
-        sprint<span>.</span>
+      <strong style={{ fontSize: "20px", fontWeight: "750", letterSpacing: "-0.5px" }}>
+        Sprint
       </strong>
-      <small>BY SCALEZIX</small>
     </Link>
   );
 }
@@ -82,10 +81,10 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
       <div className="site-announcement">
-        <span>BUILDING BETTER CONVERSATIONS</span>
-        <span>Meet Sprint, a new sales workspace by Scalezix.</span>
-        <Link href="/roadmap">
-          See what’s coming <ArrowRight size={12} />
+        <span>TRI-CHANNEL SALES AUTOMATION</span>
+        <span>Automate Email, WhatsApp, and AI Voice Calls from One Dashboard.</span>
+        <Link href="/features">
+          Explore features <ArrowRight size={12} />
         </Link>
       </div>
       <header className="site-header">

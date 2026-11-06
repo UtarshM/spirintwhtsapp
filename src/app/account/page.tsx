@@ -34,8 +34,24 @@ export default async function Page() {
     .select("workspace_id,role")
     .eq("user_id", user.id)
     .limit(1);
-  if (!membershipData?.[0]?.workspace_id) return <Account email={user.email || ""} />;
-  const workspaceId = membershipData[0].workspace_id;
+  let workspaceId = membershipData?.[0]?.workspace_id;
+  let role = membershipData?.[0]?.role || "owner";
+
+  if (!workspaceId) {
+    const companyName =
+      (user.user_metadata?.company_name as string) ||
+      `${user.email?.split("@")[0] || "My"}'s Workspace`;
+    const { data: newWsId, error: createError } = await db.rpc(
+      "create_workspace",
+      { workspace_name: companyName },
+    );
+    if (!createError && newWsId) {
+      workspaceId = newWsId;
+      role = "owner";
+    } else {
+      return <Account email={user.email || ""} />;
+    }
+  }
   const { data: workspace } = await db
     .from("workspaces")
     .select("name")
@@ -50,9 +66,9 @@ export default async function Page() {
         userId: user.id,
         workspaceId,
         name: workspace?.name || "My workspace",
-        role: membershipData[0].role,
+        role,
         canEdit:
-          ["owner", "administrator"].includes(membershipData[0].role) &&
+          ["owner", "administrator"].includes(role) &&
           (assurance?.nextLevel !== "aal2" ||
             assurance?.currentLevel === "aal2"),
       }}

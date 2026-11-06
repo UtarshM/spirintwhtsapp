@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { authorize, apiError, ApiError } from "@/lib/auth";
+import {
+  integrationConfiguration,
+  aiConfiguration,
+} from "@/lib/integration-config";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
@@ -13,6 +17,8 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         integrations: data,
+        configuration: integrationConfiguration(process.env),
+        ai: aiConfiguration(process.env),
         liveSendingEnabled: false,
         checkoutEnabled: false,
         healthVerified: false,

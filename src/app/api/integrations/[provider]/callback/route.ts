@@ -68,7 +68,7 @@ export async function GET(
     const { data: integration, error: saveError } = await service
       .from("integrations")
       .upsert(
-        { workspace_id: stateRow.workspace_id, provider, status: "connected" },
+        { workspace_id: stateRow.workspace_id, provider, status: "pending" },
         { onConflict: "workspace_id,provider" },
       )
       .select("id")
@@ -78,10 +78,18 @@ export async function GET(
       .from("integration_secrets")
       .upsert({ integration_id: integration.id, ciphertext });
     if (secretError) throw secretError;
+    const { error: activateError } = await service
+      .from("integrations")
+      .update({ status: "connected" })
+      .eq("id", integration.id)
+      .eq("workspace_id", stateRow.workspace_id);
+    if (activateError) throw activateError;
     return NextResponse.redirect(
-      new URL("/account?connected=" + provider, app),
+      new URL("/account?connected=" + provider + "#integrations", app),
     );
   } catch {
-    return NextResponse.redirect(new URL("/account?connection=failed", app));
+    return NextResponse.redirect(
+      new URL("/account?connection=failed#integrations", app),
+    );
   }
 }

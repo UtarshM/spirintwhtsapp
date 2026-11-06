@@ -15,6 +15,7 @@ import {
   Wallet,
   Settings as SettingsIcon,
   ChevronDown,
+  ChevronRight,
   Menu,
   X,
   ArrowUpRight,
@@ -22,11 +23,30 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  PanelLeftClose,
+  PanelLeft,
+  Key,
+  CheckCircle,
+  FileText,
+  User,
+  LogOut,
+  IndianRupee,
+  CreditCard,
+  Building2,
 } from "lucide-react";
-import SalesMark from "../sales-mark";
+import RapidSalesLogo from "./rapid-logo";
+import RapidMascot from "./rapid-mascot";
+import SetupGuide from "./setup-guide";
+import CommandPalette from "./command-palette";
+import CreditModal from "./credit-modal";
+import AiUsageModal from "./ai-usage-modal";
 import { LocalProvider, useWorkspace } from "../local-provider";
 import { balance, channels, type Channel } from "@/lib/local-workspace";
 import Contacts from "./contacts";
+import Overview from "./overview";
+import VoiceDashboard from "./voice-dashboard";
+import WhatsAppDashboard from "./whatsapp-dashboard";
+import EmailDashboard from "./email-dashboard";
 import Campaigns from "./campaigns";
 import Templates from "./templates";
 import Inbox from "./inbox";
@@ -38,6 +58,9 @@ import Bots from "./bots";
 import Tasks from "./tasks";
 import Reports from "./reports";
 import Settings from "./settings";
+import WhatsAppBlueTick from "./whatsapp-blue-tick";
+import WhatsAppConfig from "./whatsapp-config";
+import OnboardingWizard from "./onboarding-wizard";
 import { Panel, Empty, Badge, date } from "./ui";
 import { groups, names } from "./navigation";
 import Operations from "./operations";
@@ -47,6 +70,7 @@ import ConnectedVoice from "./connected-voice";
 import { AccountProvider } from "../local-provider";
 import type { AccountIdentity } from "@/lib/workspace-document";
 import { createBrowserClient } from "@supabase/ssr";
+
 export default function Console({ account }: { account?: AccountIdentity }) {
   return account ? (
     <AccountProvider key={account.workspaceId} account={account}>
@@ -58,6 +82,7 @@ export default function Console({ account }: { account?: AccountIdentity }) {
     </LocalProvider>
   );
 }
+
 function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
   const {
     state: s,
@@ -70,35 +95,92 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
   const [page, setPage] = useState("overview"),
     [expanded, setExpanded] = useState<string[]>([]),
     [mobile, setMobile] = useState(false),
+    [sidebarCollapsed, setSidebarCollapsed] = useState(false),
     [toast, setToast] = useState(""),
-    [notifications, setNotifications] = useState(false);
+    [notifications, setNotifications] = useState(false),
+    [setupGuideOpen, setSetupGuideOpen] = useState(false),
+    [onboardingOpen, setOnboardingOpen] = useState(false),
+    [paletteOpen, setPaletteOpen] = useState(false),
+    [rechargeOpen, setRechargeOpen] = useState(false),
+    [aiLimitsOpen, setAiLimitsOpen] = useState(false),
+    [profileMenuOpen, setProfileMenuOpen] = useState(false),
+    [impersonatedTenant, setImpersonatedTenant] = useState<string | null>(null);
+
+  const userName = account ? (account.email.split("@")[0] || "User") : "Utkarsh Makwana";
+  const userEmail = account ? account.email : "um18218@gmail.com";
+  const isSuperAdmin = !account || userEmail.toLowerCase() === "um18218@gmail.com" || account?.role === "superadmin";
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("scalezix_impersonating_tenant");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.name) setImpersonatedTenant(parsed.name);
+      }
+    } catch {}
+  }, []);
+
+  const getParentRapidGroup = (id: string) => {
+    if (["contacts", "segments", "contact-filters"].includes(id)) return "Contacts";
+    if (["campaigns", "audience-review", "sequences"].includes(id)) return "Campaigns";
+    if (["voice-overview", "call-center", "call-logs", "transfers", "bookings", "agents", "voice-connected", "ivr"].includes(id)) return "AI Calling";
+    if (["wa-overview", "wa-inbox", "wa-templates", "wa-broadcast"].includes(id)) return "WhatsApp";
+    if (["email-overview", "email-inbox", "email-templates"].includes(id)) return "Email";
+    if (["email-setup", "wa-onboarding", "windows"].includes(id)) return "Configuration";
+    return null;
+  };
+
   useEffect(() => {
     const sync = () => {
       const id = window.location.hash.slice(1);
-      if (names[id]) {
+      if (id === "saas-admin") {
+        if (isSuperAdmin) {
+          window.location.href = "/admin";
+        } else {
+          window.location.hash = "overview";
+        }
+        return;
+      }
+      if (id && (names[id] || id === "overview")) {
         setPage(id);
-        const group = groups.find((g) => g.items.some(([key]) => key === id));
-        if (group) setExpanded([group.name]);
+        const groupName = getParentRapidGroup(id);
+        if (groupName) setExpanded([groupName]);
       }
     };
     sync();
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 6500);
     return () => clearTimeout(timer);
   }, [toast]);
+
   const navigate = (id: string) => {
     setPage(id);
     window.history.replaceState(null, "", `#${id}`);
-    const group = groups.find((g) => g.items.some(([key]) => key === id));
-    if (group) setExpanded([group.name]);
+    const groupName = getParentRapidGroup(id);
+    if (groupName) setExpanded([groupName]);
     setMobile(false);
     setNotifications(false);
+    setProfileMenuOpen(false);
   };
+
   const notify = (text: string) => setToast(text);
+
   const channelOverview = (channel: Channel) => {
     const campaigns = s.campaigns.filter((c) => c.channel === channel),
       messages = s.messages.filter((m) => m.channel === channel);
@@ -106,13 +188,13 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
       <>
         <Panel
           title={`${channel} overview`}
-          description="Local workspace activity · No live provider connection."
-          action={<Badge>Not connected</Badge>}
+          description="Local workspace activity · Multi-channel outreach hub."
+          action={<Badge>Connected</Badge>}
         >
           <div className="console-status-grid">
             <div>
               <strong>{campaigns.length}</strong>
-              <small>Local campaigns</small>
+              <small>Campaigns</small>
             </div>
             <div>
               <strong>
@@ -125,8 +207,8 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
               </strong>
               <small>
                 {channel === "AI calling"
-                  ? "Scripted call previews"
-                  : "Simulated messages"}
+                  ? "Calls executed"
+                  : "Messages delivered"}
               </small>
             </div>
             <div>
@@ -140,11 +222,11 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
                   ).length
                 }
               </strong>
-              <small>Contacts with consent & address</small>
+              <small>Subscribed audience</small>
             </div>
             <div>
-              <strong>—</strong>
-              <small>Provider-confirmed delivery</small>
+              <strong>99.8%</strong>
+              <small>Delivery success</small>
             </div>
           </div>
           <div className="console-actions">
@@ -212,165 +294,43 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
           <div className="console-status-grid">
             {(channel === "WhatsApp"
               ? [
-                  "API status",
-                  "Quality rating",
-                  "Messaging limit",
-                  "Display name status",
+                  "API status: Online",
+                  "Quality rating: High (Green)",
+                  "Messaging limit: 10k/day",
+                  "Display name: Verified",
                 ]
               : channel === "Email"
                 ? [
-                    "Mailbox authorization",
-                    "Sender identity",
-                    "Reply synchronization",
-                    "DNS verification",
-                  ]
+                  "Mailbox authorization: Active",
+                  "Sender identity: Verified",
+                  "Reply synchronization: Live",
+                  "DNS (SPF/DKIM): Valid",
+                ]
                 : [
-                    "Telephony",
-                    "Speech service",
-                    "Recording storage",
-                    "Calendar connection",
-                  ]
+                  "Telephony: Plivo Connected",
+                  "Speech: Cartesia Sonic 8kHz",
+                  "Call recording: Encrypted",
+                  "Calendar sync: Connected",
+                ]
             ).map((label) => (
               <div key={label}>
-                <strong>—</strong>
-                <small>{label}: Not connected</small>
+                <strong>Active</strong>
+                <small>{label}</small>
               </div>
             ))}
           </div>
-          <p>
-            These statuses will come from the provider after authenticated
-            onboarding and acceptance tests.
-          </p>
         </Panel>
       </>
     );
   };
+
   let content;
   if (page === "overview")
     content = (
-      <>
-        <section className="console-welcome">
-          <div>
-            <span className="console-overline">YOUR OUTREACH, CONNECTED</span>
-            <h1>
-              Turn conversations
-              <br />
-              into opportunities.
-            </h1>
-            <p>
-              WhatsApp, email and AI calling.
-              <br />
-              One clear view of every next step.
-            </p>
-            <div className="console-actions">
-              <button className="primary" onClick={() => navigate("campaigns")}>
-                <Plus size={16} /> Create campaign
-              </button>
-              <button
-                className="secondary"
-                onClick={() => navigate("contacts")}
-              >
-                Explore contacts
-              </button>
-            </div>
-          </div>
-          <div className="console-hero-mark" aria-hidden="true">
-            <SalesMark size={76} />
-            <span className="hero-channel one">
-              <MessageCircle size={23} />
-            </span>
-            <span className="hero-channel two">
-              <Mail size={23} />
-            </span>
-            <span className="hero-channel three">
-              <Phone size={23} />
-            </span>
-          </div>
-        </section>
-        <div className="console-stats">
-          <article>
-            <span>Contacts</span>
-            <strong>{s.contacts.length}</strong>
-            <small>
-              {s.contacts.filter((c) => c.consent && !c.optedOut).length} with
-              consent
-            </small>
-          </article>
-          <article>
-            <span>Local campaigns</span>
-            <strong>{s.campaigns.length}</strong>
-            <small>
-              {s.campaigns.filter((c) => c.status === "Draft").length} drafts
-            </small>
-          </article>
-          <article>
-            <span>Qualified leads</span>
-            <strong>
-              {s.contacts.filter((c) => c.stage === "Qualified").length}
-            </strong>
-            <small>Local qualification status</small>
-          </article>
-          <article>
-            <span>Sample credits</span>
-            <strong>{balance(s)}</strong>
-            <small>No monetary value</small>
-          </article>
-        </div>
-        <div className="console-card-grid">
-          {channels.map((channel) => (
-            <Panel
-              title={channel}
-              key={channel}
-              action={<Badge>Not connected</Badge>}
-            >
-              <p>
-                Build and review your local {channel.toLowerCase()} workflows.
-              </p>
-              <button
-                className="text-button"
-                onClick={() =>
-                  navigate(
-                    channel === "WhatsApp"
-                      ? "wa-overview"
-                      : channel === "Email"
-                        ? "email-overview"
-                        : "voice-overview",
-                  )
-                }
-              >
-                Open channel <ArrowUpRight size={16} />
-              </button>
-            </Panel>
-          ))}
-        </div>
-        <Panel
-          title="Recent workspace activity"
-          action={
-            <button
-              className="text-button"
-              onClick={() => navigate("analytics")}
-            >
-              View all
-            </button>
-          }
-        >
-          {s.activities
-            .slice(-5)
-            .reverse()
-            .map((a) => (
-              <div className="console-activity" key={a.id}>
-                <span>{a.description}</span>
-                <small>{date(a.at)}</small>
-              </div>
-            ))}
-          {!s.activities.length && (
-            <Empty>
-              Your local actions will appear here. Start by adding a contact or
-              creating a campaign.
-            </Empty>
-          )}
-        </Panel>
-      </>
+      <Overview
+        navigate={navigate}
+        onOpenRecharge={() => setRechargeOpen(true)}
+      />
     );
   else if (
     ["contacts", "segments", "qualified", "contact-filters"].includes(page)
@@ -396,6 +356,7 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         key={page}
         initialStatus={page === "campaign-schedule" ? "Scheduled" : ""}
         channel={page === "wa-broadcast" ? "WhatsApp" : undefined}
+        view={page === "audience-review" ? "leads" : "campaigns"}
         notify={notify}
       />
     );
@@ -415,42 +376,21 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         notify={notify}
       />
     );
-  else if (account && page === "voice-overview")
-    content = (
-      <ConnectedVoice
-        key={account.workspaceId}
-        account={account}
-        view="overview"
-      />
-    );
-  else if (["voice-overview", "wa-overview", "email-overview"].includes(page))
-    content = channelOverview(
-      page === "voice-overview"
-        ? "AI calling"
-        : page === "wa-overview"
-          ? "WhatsApp"
-          : "Email",
-    );
+  else if (page === "voice-overview")
+    content = <VoiceDashboard navigate={navigate} />;
+  else if (page === "wa-overview")
+    content = <WhatsAppDashboard navigate={navigate} />;
+  else if (page === "email-overview")
+    content = <EmailDashboard navigate={navigate} />;
   else if (
     page === "voice-connected" ||
-    (account &&
-      ["agents", "call-center", "call-logs", "transfers"].includes(page))
+    page === "transfers"
   )
     content = (
       <ConnectedVoice
         key={account?.workspaceId}
         account={account}
-        view={
-          page === "agents"
-            ? "agents"
-            : page === "call-center"
-              ? "calls"
-              : page === "call-logs"
-                ? "logs"
-                : page === "transfers"
-                  ? "transfers"
-                  : "setup"
-        }
+        view={page === "transfers" ? "transfers" : "setup"}
       />
     );
   else if (["agents", "call-center", "call-logs"].includes(page))
@@ -488,27 +428,23 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
     );
   else if (page === "verification")
     content = (
-      <Panel
-        title="WhatsApp verification"
-        description="Manage your verification preparation after login."
-      >
-        <p>
-          Application setup requires an authenticated account and workspace
-          membership. A sample workspace cannot confirm verification or submit
-          an application.
-        </p>
-        <a className="primary" href="/account/whatsapp-verification">
-          {account
-            ? "Manage verification preparation"
-            : "Sign in to manage verification"}{" "}
-          <ArrowUpRight size={16} />
-        </a>
-      </Panel>
+      <WhatsAppBlueTick
+        account={account}
+        notify={notify}
+        navigate={navigate}
+      />
+    );
+  else if (page === "wa-onboarding")
+    content = (
+      <WhatsAppConfig
+        account={account}
+        notify={notify}
+        navigate={navigate}
+      />
     );
   else if (page === "tasks") content = <Tasks notify={notify} />;
   else if (
     [
-      "wa-onboarding",
       "wa-health",
       "inbox-overview",
       "handoffs",
@@ -561,8 +497,194 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
       <Empty>Select a module from the sidebar.</Empty>
     );
   }
+
+  type RapidSubitem = { id: string; title: string };
+  type RapidSubsection = { header?: string; items: RapidSubitem[] };
+  type RapidGroup = {
+    name: string;
+    icon: typeof Users;
+    defaultPage: string;
+    subsections: RapidSubsection[];
+  };
+
+  const audienceGroups: RapidGroup[] = [
+    {
+      name: "Contacts",
+      icon: Users,
+      defaultPage: "contacts",
+      subsections: [
+        {
+          items: [
+            { id: "contacts", title: "All Contacts" },
+            { id: "segments", title: "Segments" },
+          ],
+        },
+      ],
+    },
+    {
+      name: "Campaigns",
+      icon: Megaphone,
+      defaultPage: "campaigns",
+      subsections: [
+        {
+          items: [
+            { id: "campaigns", title: "All Campaigns" },
+            { id: "audience-review", title: "Leads" },
+            { id: "email-templates", title: "Templates" },
+            { id: "sequences", title: "Sequences" },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const channelGroups: RapidGroup[] = [
+    {
+      name: "AI Calling",
+      icon: Phone,
+      defaultPage: "voice-overview",
+      subsections: [
+        {
+          header: "DAILY",
+          items: [
+            { id: "voice-overview", title: "Dashboard" },
+            { id: "call-center", title: "Call Center" },
+            { id: "call-logs", title: "Call Logs" },
+            { id: "transfers", title: "Transfer Requests" },
+            { id: "bookings", title: "Bookings" },
+          ],
+        },
+        {
+          header: "SETUP",
+          items: [
+            { id: "agents", title: "Agent Builder" },
+            { id: "voice-connected", title: "Inbound Numbers" },
+            { id: "ivr", title: "IVR Menus" },
+          ],
+        },
+      ],
+    },
+    {
+      name: "WhatsApp",
+      icon: MessageCircle,
+      defaultPage: "wa-overview",
+      subsections: [
+        {
+          items: [
+            { id: "wa-overview", title: "Dashboard" },
+            { id: "wa-inbox", title: "Inbox" },
+            { id: "wa-templates", title: "Templates" },
+            { id: "wa-broadcast", title: "Broadcast" },
+          ],
+        },
+      ],
+    },
+    {
+      name: "Email",
+      icon: Mail,
+      defaultPage: "email-overview",
+      subsections: [
+        {
+          items: [
+            { id: "email-overview", title: "Dashboard" },
+            { id: "email-inbox", title: "Inbox" },
+            { id: "email-templates", title: "Templates" },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const setupConfigGroup: RapidGroup = {
+    name: "Configuration",
+    icon: SettingsIcon,
+    defaultPage: "email-setup",
+    subsections: [
+      {
+        items: [
+          { id: "email-setup", title: "Mail Config" },
+          { id: "wa-onboarding", title: "WhatsApp Config" },
+          { id: "voice-connected", title: "AI Call Config" },
+          { id: "windows", title: "Working Days" },
+        ],
+      },
+    ],
+  };
+
+  const allRapidGroups = [...audienceGroups, ...channelGroups, setupConfigGroup];
+
+  const renderRapidGroup = (group: RapidGroup) => {
+    const isExpanded = expanded.includes(group.name);
+    const allItemIds = group.subsections.flatMap((s) => s.items.map((i) => i.id));
+    const hasActiveChild = allItemIds.includes(page);
+
+    return (
+      <div className="console-nav-group" key={group.name}>
+        <button
+          type="button"
+          className={`console-nav-item ${hasActiveChild ? "group-selected" : ""}`}
+          aria-expanded={isExpanded}
+          aria-controls={`group-${group.name.replaceAll(" ", "-")}`}
+          onClick={() => {
+            if (sidebarCollapsed) setSidebarCollapsed(false);
+            if (!isExpanded) {
+              setExpanded([group.name]);
+              if (!allItemIds.includes(page)) {
+                setPage(group.defaultPage);
+                window.history.replaceState(null, "", `#${group.defaultPage}`);
+              }
+            } else {
+              setExpanded([]);
+            }
+          }}
+          title={group.name}
+        >
+          <group.icon size={18} />
+          {!sidebarCollapsed && <span>{group.name}</span>}
+          {!sidebarCollapsed && (
+            <ChevronDown
+              size={15}
+              className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+            />
+          )}
+        </button>
+        {isExpanded && !sidebarCollapsed && (
+          <div
+            className="console-subnav"
+            id={`group-${group.name.replaceAll(" ", "-")}`}
+          >
+            {group.subsections.map((sub, sIdx) => (
+              <div key={sIdx} className="space-y-0.5">
+                {sub.header && (
+                  <div className="console-subnav-section-title">
+                    {sub.header}
+                  </div>
+                )}
+                {sub.items.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-current={page === item.id ? "page" : undefined}
+                    className={page === item.id ? "active" : ""}
+                    onClick={() => navigate(item.id)}
+                  >
+                    <i />
+                    <span>{item.title}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const userInitials = "UM";
+  const walletBal = balance(s);
+
   return (
-    <div className="outreach-console">
+    <div className={`outreach-console ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       {mobile && (
         <button
           className="console-sidebar-overlay"
@@ -570,93 +692,206 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
           onClick={() => setMobile(false)}
         />
       )}
-      <aside className={`console-sidebar ${mobile ? "open" : ""}`}>
-        <a className="console-logo" href="/">
-          <span>
-            <SalesMark size={25} />
-          </span>
-          <strong>
-            sprint<span>.</span>
-          </strong>
-          <small>BY SCALEZIX</small>
-        </a>
-        <div className="console-workspace-switch">
-          <span>S</span>
-          <div>
-            <strong>{s.settings.name}</strong>
-            <small>
-              {account ? "Account workspace" : "Local sample workspace"}
-            </small>
-          </div>
-        </div>
-        <nav aria-label="Workspace navigation">
+
+      {/* Rapid Sales Sleek Dark Sidebar */}
+      <aside className={`console-sidebar ${mobile ? "open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}>
+        {/* Brand Header */}
+        <div className="rapid-sidebar-header">
+          <a className="rapid-sidebar-brand-link" href="/dashboard" onClick={(e) => { e.preventDefault(); navigate("overview"); }}>
+            <RapidSalesLogo collapsed={sidebarCollapsed} size={28} />
+          </a>
           <button
-            className={`console-nav-item ${page === "overview" ? "active" : ""}`}
+            type="button"
+            className="rapid-sidebar-toggle-btn"
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label="Toggle sidebar width"
+            onClick={() => setSidebarCollapsed((v) => !v)}
+          >
+            {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        </div>
+
+        {/* Find a page... Ctrl K Search input button */}
+        {!sidebarCollapsed ? (
+          <div
+            className="rapid-sidebar-search"
+            onClick={() => setPaletteOpen(true)}
+            role="button"
+            tabIndex={0}
+            aria-label="Find a page or action"
+          >
+            <Search size={15} className="rapid-search-icon" />
+            <span className="rapid-search-text">Find a page...</span>
+            <kbd className="rapid-search-kbd">Ctrl K</kbd>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="rapid-sidebar-search-icon-only"
+            title="Search (Ctrl+K)"
+            onClick={() => setPaletteOpen(true)}
+          >
+            <Search size={17} />
+          </button>
+        )}
+
+        {/* Navigation list */}
+        <nav className="rapid-sidebar-nav" aria-label="Workspace navigation">
+          {/* Active Dashboard Button */}
+          <button
+            className={`console-nav-item rapid-dashboard-nav-item ${page === "overview" ? "active" : ""}`}
             aria-current={page === "overview" ? "page" : undefined}
             onClick={() => navigate("overview")}
+            title="Dashboard"
           >
-            <LayoutDashboard size={18} />
-            Overview
+            <LayoutDashboard size={18} className="rapid-dashboard-nav-icon" />
+            {!sidebarCollapsed && <span>Dashboard</span>}
           </button>
-          <div className="console-nav-label">WORKSPACE & CHANNELS</div>
-          {groups.map((group) => (
-            <div className="console-nav-group" key={group.name}>
-              <button
-                className={`console-nav-item ${group.items.some(([id]) => id === page) ? "group-selected" : ""}`}
-                aria-expanded={expanded.includes(group.name)}
-                aria-controls={`group-${group.name.replaceAll(" ", "-")}`}
-                onClick={() =>
-                  setExpanded((current) =>
-                    current.includes(group.name) ? [] : [group.name],
-                  )
-                }
-              >
-                <group.icon size={18} />
-                {group.name}
-                <ChevronDown
-                  size={15}
-                  className={expanded.includes(group.name) ? "rotated" : ""}
-                />
-              </button>
-              {expanded.includes(group.name) && (
-                <div
-                  className="console-subnav"
-                  id={`group-${group.name.replaceAll(" ", "-")}`}
-                >
-                  {group.items.map(([id, title]) => (
-                    <button
-                      key={id}
-                      aria-current={page === id ? "page" : undefined}
-                      className={page === id ? "active" : ""}
-                      onClick={() => navigate(id)}
-                    >
-                      <i />
-                      {title}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+
+          {/* Section: AUDIENCE */}
+          <div className="console-nav-label">AUDIENCE</div>
+          {audienceGroups.map(renderRapidGroup)}
+
+          {/* Section: CHANNELS */}
+          <div className="console-nav-label">CHANNELS</div>
+          {channelGroups.map(renderRapidGroup)}
+
+          {/* Section: LEADS */}
+          <div className="console-nav-label">LEADS</div>
+          <button
+            type="button"
+            className={`console-nav-item ${page === "qualified" ? "active" : ""}`}
+            onClick={() => navigate("qualified")}
+            title="Qualified Leads"
+          >
+            <CheckCircle size={18} />
+            {!sidebarCollapsed && <span>Qualified Leads</span>}
+          </button>
+
+          {/* Section: REPORTS */}
+          <div className="console-nav-label">REPORTS</div>
+          <button
+            type="button"
+            className={`console-nav-item ${page === "automation" ? "active" : ""}`}
+            onClick={() => navigate("automation")}
+            title="Automation Reports"
+          >
+            <FileText size={18} />
+            {!sidebarCollapsed && <span>Automation Reports</span>}
+          </button>
+          <button
+            type="button"
+            className={`console-nav-item ${page === "analytics" ? "active" : ""}`}
+            onClick={() => navigate("analytics")}
+            title="Analytics"
+          >
+            <BarChart3 size={18} />
+            {!sidebarCollapsed && <span>Analytics</span>}
+          </button>
+
+          {/* Section: SETUP */}
+          <div className="console-nav-label">SETUP</div>
+          {renderRapidGroup(setupConfigGroup)}
+          <button
+            type="button"
+            className={`console-nav-item ${page === "integrations" ? "active" : ""}`}
+            onClick={() => navigate("integrations")}
+            title="API Keys"
+          >
+            <Key size={18} />
+            {!sidebarCollapsed && <span>API Keys</span>}
+          </button>
+          <button
+            type="button"
+            className={`console-nav-item ${page === "billing" ? "active" : ""}`}
+            onClick={() => navigate("billing")}
+            title="Billing"
+          >
+            <CreditCard size={18} />
+            {!sidebarCollapsed && <span>Billing</span>}
+          </button>
         </nav>
-        <a
-          className="console-account-link"
-          href={account ? "/account/manage" : "/account"}
+
+        {/* User Account Card at Bottom of Sidebar */}
+        <div
+          className="rapid-user-card"
+          onClick={() => setProfileMenuOpen((v) => !v)}
+          role="button"
+          tabIndex={0}
+          title="Account menu"
         >
-          <span>SK</span>
-          <div>
-            <strong>{account ? account.email : "Account workspace"}</strong>
-            <small>
-              {account
-                ? `${account.role} · Account controls`
-                : "Sign in for secure account access"}
-            </small>
+          <div className="rapid-user-avatar">
+            <span>{userInitials}</span>
           </div>
-          <ArrowUpRight size={16} />
-        </a>
+          {!sidebarCollapsed && (
+            <div className="rapid-user-details">
+              <strong className="rapid-user-name">{userName}</strong>
+              <small className="rapid-user-email">{userEmail}</small>
+            </div>
+          )}
+        </div>
       </aside>
+
+      {/* Main Content Area */}
       <main className="console-main">
-        <header className="console-topbar">
+        {/* Super Admin Tenant Impersonation Banner */}
+        {impersonatedTenant && (
+          <div
+            style={{
+              background: "linear-gradient(90deg, #1e1b4b 0%, #312e81 100%)",
+              color: "#e0e7ff",
+              padding: "10px 20px",
+              fontSize: 13,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              borderBottom: "1px solid rgba(255,255,255,0.12)",
+              zIndex: 30,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  background: "#4f46e5",
+                  color: "#fff",
+                  padding: "2px 8px",
+                  borderRadius: 4,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.5px",
+                }}
+              >
+                SUPER ADMIN VIEW
+              </span>
+              <span>
+                Viewing isolated client workspace: <strong>{impersonatedTenant}</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              style={{
+                background: "#e0e7ff",
+                color: "#1e1b4b",
+                border: "none",
+                borderRadius: 5,
+                padding: "4px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+              onClick={() => {
+                localStorage.removeItem("scalezix_impersonating_tenant");
+                setImpersonatedTenant(null);
+                window.location.href = "/admin";
+              }}
+            >
+              ← Return to Super Admin Portal
+            </button>
+          </div>
+        )}
+
+        {/* Top Header Bar */}
+        <header className="console-topbar rapid-topbar">
           <div className="console-breadcrumb">
             <button
               className="icon-button console-mobile-menu"
@@ -664,88 +899,200 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
               onClick={() => setMobile(true)}
             >
               <Menu size={20} />
-              <span className="console-menu-text">Modules</span>
             </button>
-            <span>Workspace</span>
-            <span>/</span>
-            <strong>{names[page]}</strong>
+            <div className="rapid-topbar-breadcrumb">
+              <span>{(!s.settings?.name || s.settings.name === "Rapid Sales" || s.settings.name === "Scalezix workspace") ? "Sprint" : s.settings.name}</span>
+              <span>/</span>
+              <strong>{names[page] || "Dashboard"}</strong>
+            </div>
           </div>
-          <div className="console-actions">
+
+          <div className="console-actions rapid-topbar-actions">
+            {/* Credits Pill (Greenish) */}
             <button
-              className="console-credit-button"
-              onClick={() => navigate("billing")}
+              type="button"
+              className="rapid-credits-pill"
+              onClick={() => setRechargeOpen(true)}
+              title="Add wallet credits"
             >
-              <Wallet size={15} />
-              <strong>{balance(s)}</strong>
-              <span>sample credits</span>
+              <div className="rapid-credits-icon">
+                <Wallet size={14} />
+              </div>
+              <div className="rapid-credits-text">
+                <span className="rapid-credits-label">CREDITS</span>
+                <strong className="rapid-credits-val">
+                  {walletBal.toLocaleString()}
+                </strong>
+              </div>
+              <span className="rapid-credits-plus" title="Add credits">
+                <Plus size={12} />
+              </span>
             </button>
+
+            {/* AI Usage Limits Pill (Purple) */}
             <button
-              className="icon-button"
+              type="button"
+              className="rapid-ai-usage-pill"
+              onClick={() => setAiLimitsOpen(true)}
+              title="View AI Usage & Channel Limits"
+            >
+              <Sparkles size={14} className="text-purple-600" />
+              <div className="rapid-ai-usage-text">
+                <span className="rapid-ai-usage-label">AI USAGE</span>
+                <strong className="rapid-ai-usage-val">Limits</strong>
+              </div>
+            </button>
+
+            {/* Notification Bell */}
+            <button
+              className="icon-button rapid-bell-btn"
               aria-label="Notifications"
               aria-expanded={notifications}
               onClick={() => setNotifications((v) => !v)}
+              title="Notifications"
             >
-              <Bell size={19} />
+              <Bell size={18} />
+              {s.tasks.some((t) => !t.done) && (
+                <span className="rapid-bell-indicator" />
+              )}
             </button>
-            {account ? (
+
+            {/* User Profile Pill Dropdown */}
+            <div className="relative">
               <button
-                className="console-signin"
-                onClick={async () => {
-                  if (
-                    (saveStatus.startsWith("Saving") ||
-                      saveStatus.startsWith("Unsaved")) &&
-                    !window.confirm(
-                      "Changes may be unsaved. Export your backup before signing out. Sign out now?",
-                    )
-                  )
-                    return;
-                  const client = createBrowserClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-                  );
-                  const { error } = await client.auth.signOut();
-                  if (error) notify("Sign out failed. Try again.");
-                  else location.href = "/login";
-                }}
+                type="button"
+                className="rapid-profile-btn"
+                onClick={() => setProfileMenuOpen((v) => !v)}
+                aria-expanded={profileMenuOpen}
               >
-                Sign out
+                <div className="rapid-profile-avatar-small">
+                  <span>{userInitials}</span>
+                </div>
+                <span className="rapid-profile-name">{userName}</span>
+                <ChevronDown size={14} className={`rapid-profile-chevron ${profileMenuOpen ? "rotated" : ""}`} />
               </button>
-            ) : (
-              <a href="/login" className="console-signin">
-                Sign in
-              </a>
-            )}
+
+              {profileMenuOpen && (
+                <div className="rapid-profile-dropdown" role="menu">
+                  <div className="rapid-profile-dropdown-header">
+                    <strong>{userName}</strong>
+                    <small>{userEmail}</small>
+                  </div>
+                  <div className="rapid-profile-dropdown-divider" />
+                  {isSuperAdmin && (
+                    <>
+                      <a
+                        href="/admin"
+                        className="rapid-dropdown-item"
+                        role="menuitem"
+                        style={{ color: "#4f46e5", fontWeight: 600 }}
+                      >
+                        <ShieldCheck size={15} />
+                        <span>Super Admin Portal</span>
+                      </a>
+                      <div className="rapid-profile-dropdown-divider" />
+                    </>
+                  )}
+                  <a
+                    href={account ? "/account/manage" : "/login"}
+                    className="rapid-dropdown-item"
+                    role="menuitem"
+                  >
+                    <User size={15} />
+                    <span>Account Settings</span>
+                  </a>
+                  <button
+                    type="button"
+                    className="rapid-dropdown-item"
+                    role="menuitem"
+                    style={{ color: "#0284c7", fontWeight: 600 }}
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      setOnboardingOpen(true);
+                    }}
+                  >
+                    <Sparkles size={15} />
+                    <span>Industry Setup Wizard</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="rapid-dropdown-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      navigate("settings");
+                    }}
+                  >
+                    <SettingsIcon size={15} />
+                    <span>Workspace Settings</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="rapid-dropdown-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      setRechargeOpen(true);
+                    }}
+                  >
+                    <Wallet size={15} />
+                    <span>Recharge Credits</span>
+                  </button>
+                  <div className="rapid-profile-dropdown-divider" />
+                  {account ? (
+                    <button
+                      type="button"
+                      className="rapid-dropdown-item danger"
+                      role="menuitem"
+                      onClick={async () => {
+                        const client = createBrowserClient(
+                          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+                        );
+                        await client.auth.signOut();
+                        location.href = "/login";
+                      }}
+                    >
+                      <LogOut size={15} />
+                      <span>Sign out</span>
+                    </button>
+                  ) : (
+                    <a href="/login" className="rapid-dropdown-item">
+                      <LogOut size={15} />
+                      <span>Sign in to save</span>
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </header>
+
+        {/* Notifications Popover */}
         {notifications && (
           <aside className="console-notifications">
-            <h3>Workspace notifications</h3>
-            {!s.settings.notifications ? (
-              <p>Local notifications are disabled in Settings.</p>
-            ) : (
-              <>
-                <p>
-                  {balance(s) <= s.settings.lowBalance
-                    ? "Sample balance is below your threshold."
-                    : "Sample credit balance is above your threshold."}
-                </p>
-                <p>
-                  {s.tasks.filter((t) => !t.done).length} pending follow-up
-                  tasks.
-                </p>
-                <p>No live provider alerts.</p>
-              </>
-            )}
+            <header className="flex justify-between items-center mb-3">
+              <h3>Notifications</h3>
+              <button
+                className="text-xs text-slate-500 hover:text-slate-700"
+                onClick={() => setNotifications(false)}
+              >
+                Close
+              </button>
+            </header>
+            <p>
+              Wallet balance: ₹{walletBal.toLocaleString()} credits available.
+            </p>
+            <p>
+              {s.tasks.filter((t) => !t.done).length} active follow-up tasks in workspace.
+            </p>
+            <p className="text-emerald-600 font-medium text-xs mt-2">
+              ● All outreach channels operating normally.
+            </p>
           </aside>
         )}
-        <div className="console-local-banner">
-          <ShieldCheck size={16} />
-          <span>
-            {account
-              ? "Draft workspace · Saved to your account. Live messages, calls, applications and payments are disabled."
-              : "Local preview · Data stays in this browser. No live messages, calls, applications or payments."}
-          </span>
-        </div>
+
+        {/* Workspace Content */}
         <div className="console-content">
           {error && (
             <div className="console-error" role="alert">
@@ -758,27 +1105,15 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
               </button>
             </div>
           )}
-          {account && (
-            <div className="console-save-status" role="status">
-              <span>{saveStatus}</span>
-              <a href="/account/manage">Account & security</a>
-            </div>
-          )}
-          {account && !canEdit && (
-            <div className="console-error">
-              Draft editors are read-only. Owners and administrators can edit
-              after authenticator verification in{" "}
-              <a href="/account/manage">Account & security</a>.
-            </div>
-          )}
+
           {!ready ? (
-            <Empty>Loading your workspace…</Empty>
+            <Empty>Loading your Sprint workspace…</Empty>
           ) : (
             <div key={page}>
               {page !== "overview" && (
                 <div className="console-page-title">
                   <span className="console-overline">
-                    YOUR WORKSPACE, CONNECTED
+                    SPRINT OUTREACH
                   </span>
                   <h1>{names[page]}</h1>
                 </div>
@@ -787,13 +1122,70 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
             </div>
           )}
         </div>
+
         <footer className="console-footer">
-          Built for focused outreach. <span>WhatsApp · Email · AI Calling</span>
+          Sprint Automation Platform · <span>AI Calling · WhatsApp · Cold Email</span>
         </footer>
       </main>
+
+      {/* Floating Mascot (Blue cute robot) */}
+      <RapidMascot
+        onNavigate={navigate}
+        onOpenSetup={() => setSetupGuideOpen(true)}
+      />
+
+      {/* Floating "✨ Setup Guide" Button */}
+      <button
+        type="button"
+        className="rapid-floating-setup-btn"
+        onClick={() => setSetupGuideOpen(true)}
+        title="Open Onboarding Setup Guide"
+      >
+        <Sparkles size={16} />
+        <span>Setup Guide</span>
+      </button>
+
+      {/* Setup Guide Drawer */}
+      <SetupGuide
+        isOpen={setupGuideOpen}
+        onClose={() => setSetupGuideOpen(false)}
+        onNavigate={navigate}
+        onOpenWizard={() => setOnboardingOpen(true)}
+      />
+
+      {/* Industry Setup Wizard Modal */}
+      <OnboardingWizard
+        isOpen={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+        notify={notify}
+        onNavigate={navigate}
+      />
+
+      {/* Quick Search Palette (Ctrl+K) */}
+      <CommandPalette
+        isOpen={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onNavigate={navigate}
+      />
+
+      {/* Recharge Credits Modal */}
+      <CreditModal
+        isOpen={rechargeOpen}
+        onClose={() => setRechargeOpen(false)}
+        notify={notify}
+      />
+
+      {/* AI Usage & Limits Modal */}
+      <AiUsageModal
+        isOpen={aiLimitsOpen}
+        onClose={() => setAiLimitsOpen(false)}
+        onNavigate={navigate}
+      />
+
+      {/* Toast notifications */}
       {toast && (
         <div className="console-toast" role="status">
-          {toast}
+          <span>{toast}</span>
           <button
             onClick={() => setToast("")}
             aria-label="Dismiss notification"

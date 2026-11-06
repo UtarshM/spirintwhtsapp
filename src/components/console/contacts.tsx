@@ -50,6 +50,10 @@ export default function Contacts({
     [preview, setPreview] = useState<ReturnType<typeof parseContactCsv> | null>(
       null,
     );
+  const [crmSubTab, setCrmSubTab] = useState<string>("Leads");
+  const [selectedChannelFilter, setSelectedChannelFilter] = useState<string>("");
+  const [selectedOutcomeFilter, setSelectedOutcomeFilter] = useState<string>("");
+
   const selectedSegment = s.resources.find((r) => r.id === segment);
   const people = audience(
     {
@@ -62,6 +66,11 @@ export default function Contacts({
   ).filter(
     (c) =>
       (!qualified || c.stage === "Qualified") &&
+      (!selectedChannelFilter ||
+        (selectedChannelFilter === "Calls" ? !!c.phone :
+         selectedChannelFilter === "WhatsApp" ? !!c.phone :
+         selectedChannelFilter === "Email" ? !!c.email : true)) &&
+      (!selectedOutcomeFilter || c.tags.includes(selectedOutcomeFilter)) &&
       `${c.name} ${c.company} ${c.email} ${c.tags.join(" ")}`
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -77,17 +86,53 @@ export default function Contacts({
       consent: "",
     });
   const csv = csvSource ? inspectContactCsv(csvSource) : null;
+
+  const totalContactsCount = s.contacts.length;
+  const consentedCount = s.contacts.filter((c) => c.consent && !c.optedOut).length;
+  const qualifiedCount = s.contacts.filter((c) => c.stage === "Qualified").length;
+  const totalValue = s.contacts
+    .filter((c) => (!qualified || c.stage === "Qualified"))
+    .reduce((sum, c) => sum + (c.value || 0), 0);
+
+  const RAPID_OUTCOMES = [
+    "Demo Booked",
+    "Callback Requested",
+    "Interested — Info",
+    "Objection — Price",
+    "Objection — Time",
+    "Objection — Existing",
+    "Not Interested",
+    "No Response",
+    "Wrong Number",
+    "Completed",
+    "Voicemail",
+    "Call Failed",
+    "Interested",
+    "Rejected",
+    "Follow Up",
+    "Neutral",
+    "Busy",
+    "No Answer",
+    "Failed",
+  ];
+
   return (
     <>
       <Panel
         title={
           segments
-            ? "Saved audiences"
+            ? "Audience · Segments & Lists"
             : qualified
-              ? "Qualified leads"
-              : "Contacts"
+              ? "Leads · Qualified CRM Hub"
+              : "Audience · Contacts Roster"
         }
-        description="Workspace contacts · Consent is never inferred from an import."
+        description={
+          segments
+            ? "Dynamic audience groups filtered by channel availability, tags, and consent status."
+            : qualified
+              ? "Verified high-intent leads qualified by AI Voice calling dialogues, WhatsApp interactions, and forms."
+              : "Comprehensive customer directory with multi-channel reachability and consent tracking."
+        }
         action={
           <div className="console-actions">
             <button
@@ -127,16 +172,167 @@ export default function Contacts({
           </div>
         }
       >
-        <div className="console-toolbar">
+      {/* RapidSales Subtabs for Qualified Leads */}
+      {qualified && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18, borderBottom: "1px solid #e2e8f0", paddingBottom: 10 }}>
+          {[
+            "Leads",
+            "Manual Leads",
+            "Auto-Assign",
+            "Alerts",
+            "Buckets",
+            "Custom outcomes",
+            "Export Excel",
+          ].map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={crmSubTab === tab ? "primary" : "secondary"}
+              style={{ padding: "6px 14px", fontSize: 13, borderRadius: 20 }}
+              onClick={() => {
+                setCrmSubTab(tab);
+                if (tab === "Export Excel") {
+                  download(
+                    "qualified-leads-export.csv",
+                    toCsv([
+                      ["Name", "Company", "Email", "Phone", "Stage", "Value", "Tags", "Owner"],
+                      ...s.contacts
+                        .filter((c) => c.stage === "Qualified")
+                        .map((c) => [c.name, c.company, c.email, c.phone, c.stage, c.value || 0, c.tags.join(";"), c.owner]),
+                    ]),
+                    "text/csv",
+                  );
+                  notify("Exporting qualified leads CSV");
+                }
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Top Stat Cards Banner */}
+      <div className="rapid-stat-cards-grid" style={{ marginBottom: 20 }}>
+        {qualified ? (
+          <>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">QUALIFIED LEADS</span>
+              <div className="rapid-stat-value">{qualifiedCount}</div>
+              <span className="rapid-stat-sub">High-intent confirmed opportunities</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">PIPELINE VALUE</span>
+              <div className="rapid-stat-value">₹{totalValue.toLocaleString("en-IN")}</div>
+              <span className="rapid-stat-sub">Estimated opportunity revenue</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">ACTIVE CONSENT</span>
+              <div className="rapid-stat-value">{consentedCount}</div>
+              <span className="rapid-stat-sub">Legally compliant for automated reach</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">QUALIFICATION RATIO</span>
+              <div className="rapid-stat-value">
+                {totalContactsCount > 0 ? `${Math.round((qualifiedCount / totalContactsCount) * 100)}%` : "0%"}
+              </div>
+              <span className="rapid-stat-sub">From {totalContactsCount} total workspace contacts</span>
+            </div>
+          </>
+        ) : segments ? (
+          <>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">TOTAL LISTS / SEGMENTS</span>
+              <div className="rapid-stat-value">{s.resources.filter((r) => r.kind === "segment").length}</div>
+              <span className="rapid-stat-sub">Saved targeting criteria</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">TOTAL CONTACTS</span>
+              <div className="rapid-stat-value">{totalContactsCount}</div>
+              <span className="rapid-stat-sub">Unique audience records</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">CONSENTED AUDIENCE</span>
+              <div className="rapid-stat-value">{consentedCount}</div>
+              <span className="rapid-stat-sub">Available for outreach</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">QUALIFIED CUSTOMERS</span>
+              <div className="rapid-stat-value">{qualifiedCount}</div>
+              <span className="rapid-stat-sub">High-intent prospects</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">TOTAL CONTACTS</span>
+              <div className="rapid-stat-value">{totalContactsCount}</div>
+              <span className="rapid-stat-sub">Roster size</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">CONSENT RECORDED</span>
+              <div className="rapid-stat-value">{consentedCount}</div>
+              <span className="rapid-stat-sub">Explicit opt-ins</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">OPTED OUT</span>
+              <div className="rapid-stat-value">{s.contacts.filter((c) => c.optedOut).length}</div>
+              <span className="rapid-stat-sub">Suppressed from messaging</span>
+            </div>
+            <div className="rapid-stat-card">
+              <span className="rapid-stat-label">TOTAL PIPELINE</span>
+              <div className="rapid-stat-value">₹{totalValue.toLocaleString("en-IN")}</div>
+              <span className="rapid-stat-sub">Pipeline value</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Toolbar with Channel Filters and Outcome Selectors */}
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          {[
+            { id: "", label: "All Channels" },
+            { id: "Calls", label: "📞 Calls" },
+            { id: "WhatsApp", label: "💬 WhatsApp" },
+            { id: "Email", label: "✉️ Email" },
+          ].map((ch) => (
+            <button
+              key={ch.id}
+              type="button"
+              className={selectedChannelFilter === ch.id ? "primary" : "secondary"}
+              style={{ padding: "5px 12px", fontSize: 12, borderRadius: 20 }}
+              onClick={() => setSelectedChannelFilter(ch.id)}
+            >
+              {ch.label}
+            </button>
+          ))}
+
+          {qualified && (
+            <select
+              value={selectedOutcomeFilter}
+              onChange={(e) => setSelectedOutcomeFilter(e.target.value)}
+              style={{ height: 34, borderRadius: 20, border: "1px solid #cbd5e1", padding: "0 12px", fontSize: 12, background: "#fff" }}
+            >
+              <option value="">All Outcomes (19 Tags)</option>
+              {RAPID_OUTCOMES.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <SearchBox
             value={query}
             onChange={setQuery}
-            placeholder="Search contacts"
+            placeholder={qualified ? "Search qualified leads..." : "Search contacts..."}
           />
           <select
             aria-label="Audience segment"
             value={segment}
             onChange={(e) => setSegment(e.target.value)}
+            style={{ height: 36, borderRadius: 8, border: "1px solid #cbd5e1", padding: "0 10px", fontSize: 13 }}
           >
             <option value="">All contacts</option>
             {s.resources
@@ -176,9 +372,10 @@ export default function Contacts({
               )
             }
           >
-            Export filtered CSV
+            Export CSV
           </button>
         </div>
+      </div>
         <details className="console-filter-panel" open={advanced || undefined}>
           <summary>Advanced contact filters</summary>
           <div className="console-form-grid">
@@ -297,46 +494,152 @@ export default function Contacts({
           </div>
         )}
         <div className="table-scroll">
-          <table>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Lead status</th>
-                <th>Audience tags</th>
-                <th>Consent</th>
-                <th />
+              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "left" }}>
+                {qualified ? (
+                  <>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>CONTACT</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>CHANNEL</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>BUCKET</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>OUTCOME</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>STATUS</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>ACTION</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>AUTO-CALL</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>SOURCE</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>CAMPAIGN</th>
+                    <th style={{ padding: "10px 14px", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>LAST CALL</th>
+                  </>
+                ) : (
+                  <>
+                    <th style={{ padding: "10px 14px", fontSize: 12, fontWeight: 600, color: "#475569" }}>Lead Name</th>
+                    <th style={{ padding: "10px 14px", fontSize: 12, fontWeight: 600, color: "#475569" }}>Contact Info</th>
+                    <th style={{ padding: "10px 14px", fontSize: 12, fontWeight: 600, color: "#475569" }}>Status</th>
+                    <th style={{ padding: "10px 14px", fontSize: 12, fontWeight: 600, color: "#475569" }}>Tags / Intent</th>
+                    <th style={{ padding: "10px 14px", fontSize: 12, fontWeight: 600, color: "#475569" }}>Consent</th>
+                    <th style={{ padding: "10px 14px", fontSize: 12, fontWeight: 600, color: "#475569", textAlign: "right" }}>Actions</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {people.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <strong>{c.name}</strong>
-                    <small>{c.company}</small>
-                  </td>
-                  <td>
-                    {c.email}
-                    <small>{c.phone}</small>
-                  </td>
-                  <td>
-                    <Badge>{c.stage}</Badge>
-                  </td>
-                  <td>{c.tags.join(", ") || "—"}</td>
-                  <td>
-                    <Badge>
-                      {c.optedOut
-                        ? "Opted out"
-                        : c.consent
-                          ? "Recorded"
-                          : "Not recorded"}
-                    </Badge>
-                  </td>
-                  <td>
-                    <button className="secondary" onClick={() => setEdit(c)}>
-                      Details
-                    </button>
-                  </td>
+                <tr key={c.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  {qualified ? (
+                    <>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontWeight: 600, color: "#0f172a" }}>{c.name}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{c.phone || c.email}</div>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#4338ca", background: "#e0e7ff", padding: "3px 8px", borderRadius: 4 }}>
+                          {c.phone ? "📞 Calls" : "✉️ Email"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#166534", background: "#dcfce7", padding: "3px 8px", borderRadius: 4 }}>
+                          High Intent
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#059669", background: "#ecfdf5", padding: "3px 10px", borderRadius: 20 }}>
+                          {c.tags[0] || "Interested"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <Badge>{c.stage}</Badge>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <button className="primary" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => setEdit(c)}>
+                          Call Now
+                        </button>
+                      </td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#059669", fontWeight: 600 }}>
+                        ● Enabled
+                      </td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#64748b" }}>
+                        {c.tags.includes("meta") ? "Meta Ads" : "Manual"}
+                      </td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#64748b" }}>
+                        Direct Outreach
+                      </td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#64748b" }}>
+                        {c.createdAt ? date(c.createdAt) : "Today"}
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontWeight: 600, color: "#0f172a" }}>{c.name}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{c.company || "Independent"}</div>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: 13, color: "#1e293b" }}>{c.email || "No email"}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{c.phone || "No phone"}</div>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "3px 10px",
+                            borderRadius: 20,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background:
+                              c.stage === "Qualified"
+                                ? "#ecfdf5"
+                                : c.stage === "Engaged"
+                                  ? "#eff6ff"
+                                  : "#f1f5f9",
+                            color:
+                              c.stage === "Qualified"
+                                ? "#059669"
+                                : c.stage === "Engaged"
+                                  ? "#2563eb"
+                                  : "#64748b",
+                          }}
+                        >
+                          {c.stage}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {c.tags.length > 0 ? (
+                            c.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                style={{
+                                  background: "#f1f5f9",
+                                  color: "#334155",
+                                  padding: "2px 8px",
+                                  borderRadius: 4,
+                                  fontSize: 11,
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
+                            <span style={{ color: "#94a3b8", fontSize: 12 }}>—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <Badge>
+                          {c.optedOut
+                            ? "Opted out"
+                            : c.consent
+                              ? "Recorded"
+                              : "Not recorded"}
+                        </Badge>
+                      </td>
+                      <td style={{ padding: "12px 14px", textAlign: "right" }}>
+                        <button className="secondary" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => setEdit(c)}>
+                          Details
+                        </button>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -565,13 +868,21 @@ export default function Contacts({
               e.preventDefault();
               try {
                 const f = new FormData(e.currentTarget);
+                const rawPhone = formValue(f, "phone").replace(/[\s\-\(\)]/g, "");
+                let normalizedPhone = rawPhone;
+                if (/^\d{10}$/.test(rawPhone)) {
+                  normalizedPhone = `+91${rawPhone}`;
+                } else if (/^0\d{10}$/.test(rawPhone)) {
+                  normalizedPhone = `+91${rawPhone.slice(1)}`;
+                }
+
                 const contact = localContactSchema.parse({
                   ...(edit || {}),
                   id: edit?.id || uid(),
                   name: formValue(f, "name"),
                   company: formValue(f, "company"),
                   email: formValue(f, "email"),
-                  phone: formValue(f, "phone"),
+                  phone: normalizedPhone,
                   stage: formValue(f, "stage"),
                   tags: formValue(f, "tags")
                     .split(",")

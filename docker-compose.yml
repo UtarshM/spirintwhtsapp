@@ -1,0 +1,46 @@
+services:
+  # Next.js 16 Web Application & REST APIs
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scalezix-web
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      - voice
+
+  # Real-Time Voice WebSocket Streaming Host (Plivo <-> Cartesia / Sarvam G.711)
+  voice:
+    build:
+      context: .
+      dockerfile: services/voice/Dockerfile
+    container_name: scalezix-voice
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - VOICE_PORT=8080
+
+  # Background Queue Worker (Meta Webhooks, SQS Outbox, stop-on-reply reconciliation)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scalezix-worker
+    restart: always
+    command: ["npm", "run", "worker:meta-events"]
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+

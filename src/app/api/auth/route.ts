@@ -15,15 +15,17 @@ export async function POST(request: Request) {
       .object({
         mode: z.enum(["login", "signup", "recover"]),
         email: z.email(),
-        password: z.string().min(12).max(128).nullable().optional(),
+        password: z.string().min(8).max(128).nullable().optional(),
+        companyName: z.string().max(120).optional(),
+        fullName: z.string().max(120).optional(),
       })
       .safeParse(await request.json());
     if (!parsed.success)
       throw new ApiError(
         422,
-        "Enter a valid email and a password of at least 12 characters",
+        "Enter a valid email and a password of at least 8 characters",
       );
-    const { mode, email, password } = parsed.data;
+    const { mode, email, password, companyName, fullName } = parsed.data;
     const db = await userDb();
     const callback = `${getAppUrl()}/auth/callback`;
     if (mode !== "recover" && !password)
@@ -38,7 +40,13 @@ export async function POST(request: Request) {
       ({ error } = await db.auth.signUp({
         email,
         password: password!,
-        options: { emailRedirectTo: callback },
+        options: {
+          emailRedirectTo: callback,
+          data: {
+            company_name: companyName?.trim() || "My Workspace",
+            full_name: fullName?.trim() || email.split("@")[0],
+          },
+        },
       }));
     else
       ({ error } = await db.auth.resetPasswordForEmail(email, {

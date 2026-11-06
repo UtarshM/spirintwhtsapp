@@ -39,3 +39,42 @@ export function getMetadataBaseUrl(): URL {
     return new URL("http://localhost:3000");
   }
 }
+
+export type SubdomainTarget = "marketing" | "app" | "admin";
+
+/**
+ * Returns the fully qualified URL for a given subdomain and path.
+ * Supports production domains (scalezix.ai, app.scalezix.ai, admin.scalezix.ai)
+ * and local development (localhost:3000, app.localhost:3000, admin.localhost:3000).
+ */
+export function getSubdomainUrl(target: SubdomainTarget, path = ""): string {
+  const base = getAppUrl();
+  const normalizedPath = path ? (path.startsWith("/") ? path : `/${path}`) : "";
+  try {
+    const url = new URL(base);
+    const host = url.hostname;
+    const port = url.port ? `:${url.port}` : "";
+
+    // Localhost development
+    if (host === "localhost" || host === "127.0.0.1") {
+      if (target === "marketing") return `${url.protocol}//localhost${port}${normalizedPath}`;
+      return `${url.protocol}//${target}.localhost${port}${normalizedPath}`;
+    }
+
+    // Production domain handling
+    const parts = host.split(".");
+    if (parts.length > 2) {
+      // Already has a subdomain (e.g. app.scalezix.ai or preview.scalezix.ai)
+      const apex = parts.slice(-2).join(".");
+      if (target === "marketing") return `${url.protocol}//${apex}${port}${normalizedPath}`;
+      return `${url.protocol}//${target}.${apex}${port}${normalizedPath}`;
+    }
+
+    // Apex domain (e.g. scalezix.ai)
+    if (target === "marketing") return `${url.protocol}//${host}${port}${normalizedPath}`;
+    return `${url.protocol}//${target}.${host}${port}${normalizedPath}`;
+  } catch {
+    return `${base}${normalizedPath}`;
+  }
+}
+

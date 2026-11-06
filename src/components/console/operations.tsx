@@ -6,6 +6,7 @@ import type { AccountIdentity } from "@/lib/workspace-document";
 import { createReminder, reminderTask, saveAvailability } from "@/lib/booking";
 import { Panel, Badge, Empty, date, download, formValue } from "./ui";
 import Resources from "./resources";
+import { EmailConnection } from "./connection-controls";
 
 type Props = {
   page: string;
@@ -323,12 +324,14 @@ export default function Operations({ page, navigate, notify, account }: Props) {
                 <Badge>Provider acceptance pending</Badge>
                 <h3>{provider}</h3>
                 <p>
-                  Authorization, sender access, refresh/reconnection and
-                  incoming-reply tests are pending.
+                  Authorize your account through the provider. Sender discovery,
+                  durable reply synchronization and delivery acceptance remain
+                  separate setup steps.
                 </p>
-                <button className="secondary" disabled>
-                  Connect {provider} — integration pending
-                </button>
+                <EmailConnection
+                  account={account}
+                  provider={provider === "Gmail" ? "gmail" : "zoho"}
+                />
               </article>
             ))}
           </div>

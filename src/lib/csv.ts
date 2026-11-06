@@ -45,7 +45,13 @@ export function parseContactCsv(text: string, existing: Contact[] = []) {
     const get = (k: string) => (r[idx(k)] || "").trim();
     const name = get("name"),
       email = get("email").toLowerCase(),
-      phone = get("phone");
+      rawPhone = get("phone");
+    let phone = rawPhone.replace(/[\s\-\(\)]/g, "");
+    if (/^\d{10}$/.test(phone)) {
+      phone = `+91${phone}`;
+    } else if (/^0\d{10}$/.test(phone)) {
+      phone = `+91${phone.slice(1)}`;
+    }
     if (
       !name ||
       name.length > 120 ||

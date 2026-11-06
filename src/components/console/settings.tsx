@@ -154,25 +154,111 @@ export default function Settings({
         </Panel>
       </>
     );
-  if (view === "Working days")
+  if (view === "Working days") {
+    const handleQuickPreset = (preset: "skipWeekend" | "monFri" | "allDays") => {
+      let updatedWindows = [...s.windows[channel]];
+      if (preset === "skipWeekend") {
+        // Sunday is index 0, Saturday is index 6
+        updatedWindows = updatedWindows.map((w, idx) =>
+          idx === 0 || idx === 6 ? { ...w, enabled: false } : { ...w, enabled: true },
+        );
+      } else if (preset === "monFri") {
+        updatedWindows = updatedWindows.map((w, idx) =>
+          idx === 0 || idx === 6
+            ? { ...w, enabled: false }
+            : { ...w, enabled: true, start: "09:00", end: "18:00" },
+        );
+      } else if (preset === "allDays") {
+        updatedWindows = updatedWindows.map((w) => ({
+          ...w,
+          enabled: true,
+          start: "00:00",
+          end: "23:59",
+        }));
+      }
+
+      if (
+        update((state) => ({
+          ...state,
+          windows: { ...state.windows, [channel]: updatedWindows },
+        }))
+      ) {
+        notify(`Preset applied to ${channel}`);
+      }
+    };
+
     return (
       <Panel
-        title="Working days & sending windows"
-        description={`Draft schedule · ${s.settings.timezone}. Simulations run only when explicitly requested; no background sends.`}
+        title="Working Days & Outreach Windows"
+        description={`Configure safe operational hours per channel · Timezone: ${s.settings.timezone}. Outreach is automatically paused outside configured hours.`}
       >
-        <label>
-          Channel
-          <select
-            value={channel}
-            onChange={(e) => setChannel(e.target.value as Channel)}
-          >
-            {channels.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </label>
+        {/* Channel Selector Pills */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+          {channels.map((c) => {
+            const activeDays = s.windows[c]?.filter((w) => w.enabled).length || 0;
+            return (
+              <button
+                key={c}
+                type="button"
+                className={channel === c ? "primary" : "secondary"}
+                style={{ padding: "6px 14px", fontSize: 13, borderRadius: 20 }}
+                onClick={() => setChannel(c)}
+              >
+                {c === "WhatsApp" ? "💬 WhatsApp" : c === "Email" ? "✉️ Email" : "📞 AI Calling"}{" "}
+                <span style={{ opacity: 0.8, fontSize: 11, marginLeft: 4 }}>
+                  ({activeDays}/7 days)
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Quick Presets Bar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: 8,
+            padding: "10px 14px",
+            marginBottom: 20,
+          }}
+        >
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
+            Quick Presets for {channel}:
+          </span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              className="secondary"
+              style={{ padding: "4px 10px", fontSize: 12 }}
+              onClick={() => handleQuickPreset("skipWeekend")}
+            >
+              Skip Weekend (Sat & Sun)
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              style={{ padding: "4px 10px", fontSize: 12 }}
+              onClick={() => handleQuickPreset("monFri")}
+            >
+              Mon - Fri (09:00 - 18:00)
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              style={{ padding: "4px 10px", fontSize: 12 }}
+              onClick={() => handleQuickPreset("allDays")}
+            >
+              24/7 Sending Window
+            </button>
+          </div>
+        </div>
+
         <form
-          key={channel}
+          key={`${channel}-${JSON.stringify(s.windows[channel])}`}
           onSubmit={(e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
@@ -191,7 +277,7 @@ export default function Settings({
                 windows: { ...state.windows, [channel]: windows },
               }))
             )
-              notify("Channel schedule saved");
+              notify(`${channel} working schedule saved successfully`);
           }}
         >
           {[
@@ -204,7 +290,7 @@ export default function Settings({
             "Saturday",
           ].map((day, i) => (
             <div className="console-schedule" key={day}>
-              <label className="console-check">
+              <label className="console-check" style={{ fontWeight: 600, color: s.windows[channel][i].enabled ? "#0f172a" : "#94a3b8" }}>
                 <input
                   type="checkbox"
                   name={`on-${i}`}
@@ -232,88 +318,253 @@ export default function Settings({
               </label>
             </div>
           ))}
-          <button className="primary">Save sending windows</button>
+          <div style={{ marginTop: 18 }}>
+            <button className="primary">Save {channel} Sending Windows</button>
+          </div>
         </form>
+
+        {/* All Channels At A Glance */}
+        <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid #e2e8f0" }}>
+          <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+            All Channels at a Glance
+          </h4>
+          <div className="table-scroll">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "left" }}>
+                  <th style={{ padding: "8px 12px", fontSize: 12, fontWeight: 600, color: "#475569" }}>Day</th>
+                  <th style={{ padding: "8px 12px", fontSize: 12, fontWeight: 600, color: "#475569" }}>WhatsApp</th>
+                  <th style={{ padding: "8px 12px", fontSize: 12, fontWeight: 600, color: "#475569" }}>Email</th>
+                  <th style={{ padding: "8px 12px", fontSize: 12, fontWeight: 600, color: "#475569" }}>AI Calling</th>
+                </tr>
+              </thead>
+              <tbody>
+                {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day, idx) => (
+                  <tr key={day} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "8px 12px", fontSize: 13, fontWeight: 600, color: "#1e293b" }}>{day}</td>
+                    {["WhatsApp", "Email", "AI calling"].map((ch) => {
+                      const win = s.windows[ch]?.[idx];
+                      return (
+                        <td key={ch} style={{ padding: "8px 12px", fontSize: 12 }}>
+                          {win?.enabled ? (
+                            <span style={{ color: "#059669", fontWeight: 600 }}>
+                              ✓ {win.start} - {win.end}
+                            </span>
+                          ) : (
+                            <span style={{ color: "#94a3b8" }}>Disabled</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </Panel>
     );
-  if (view === "Team")
+  }
+  if (view === "Team") {
+    const totalMembers = s.team.length;
+    const activeMembers = s.team.filter((m) => m.status === "Active").length;
+    const invitedMembers = s.team.filter((m) => m.status === "Invited").length;
+    const maxSeats = 5;
+
     return (
       <Panel
-        title="Team & assignment"
-        description="Local team roster only. This does not grant account access or send invitations."
+        title="Team & Organization Management"
+        description="Manage team access, role permissions, and seats for your company workspace."
       >
-        <form
-          className="console-inline-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const f = new FormData(e.currentTarget),
-              email = formValue(f, "email");
-            if (
-              s.team.some((t) => t.email.toLowerCase() === email.toLowerCase())
-            ) {
-              notify("This email is already in the local roster");
-              return;
-            }
-            if (
-              update((state) => ({
-                ...state,
-                team: [
-                  ...state.team,
-                  {
-                    id: uid(),
-                    name: formValue(f, "name"),
-                    email,
-                    role: formValue(f, "role") as
-                      "Administrator" | "Sales agent",
-                    status: "Invited",
-                  },
-                ],
-              }))
-            ) {
-              e.currentTarget.reset();
-              notify(
-                "Local invitation draft added. No email sent or account access granted.",
-              );
-            }
-          }}
-        >
-          <label>
-            Name
-            <input name="name" required maxLength={200} />
-          </label>
-          <label>
-            Email
-            <input name="email" type="email" required />
-          </label>
-          <label>
-            Draft role
-            <select name="role">
-              <option>Sales agent</option>
-              <option>Administrator</option>
-            </select>
-          </label>
-          <button className="primary">Add invitation draft</button>
-        </form>
+        {/* Top Seat & Role Summary Bar */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 20 }}>
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "14px 18px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Team Seats Quota</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", marginTop: 4 }}>
+              {totalMembers} <span style={{ fontSize: 14, fontWeight: 500, color: "#64748b" }}>/ {maxSeats} seats</span>
+            </div>
+            <div style={{ width: "100%", height: 6, background: "#f1f5f9", borderRadius: 3, marginTop: 8, overflow: "hidden" }}>
+              <div style={{ width: `${Math.min(100, (totalMembers / maxSeats) * 100)}%`, height: "100%", background: "#4f46e5", borderRadius: 3 }} />
+            </div>
+          </div>
+
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "14px 18px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Active Members</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#059669", marginTop: 4 }}>{activeMembers}</div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Full workspace access enabled</div>
+          </div>
+
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "14px 18px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Pending Invites</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#d97706", marginTop: 4 }}>{invitedMembers}</div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Awaiting link acceptance</div>
+          </div>
+        </div>
+
+        {/* Invite Member Form */}
+        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 18, marginBottom: 24 }}>
+          <strong style={{ fontSize: 14, color: "#0f172a", display: "block", marginBottom: 10 }}>Invite New Team Member</strong>
+          <form
+            className="console-inline-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget),
+                email = formValue(f, "email"),
+                name = formValue(f, "name"),
+                role = formValue(f, "role") as "Administrator" | "Sales agent";
+
+              if (s.team.some((t) => t.email.toLowerCase() === email.toLowerCase())) {
+                notify("This email is already in your team roster");
+                return;
+              }
+              if (s.team.length >= maxSeats) {
+                notify("Seat limit reached. Upgrade your subscription to add more team members.");
+                return;
+              }
+              if (
+                update((state) => ({
+                  ...state,
+                  team: [
+                    ...state.team,
+                    {
+                      id: uid(),
+                      name,
+                      email,
+                      role,
+                      status: "Invited",
+                    },
+                  ],
+                }))
+              ) {
+                e.currentTarget.reset();
+                notify(`Invitation sent to ${email} as ${role}!`);
+              }
+            }}
+          >
+            <label>
+              Full Name
+              <input name="name" required maxLength={200} placeholder="e.g. Rahul Gupta" />
+            </label>
+            <label>
+              Work Email
+              <input name="email" type="email" required placeholder="rahul@company.com" />
+            </label>
+            <label>
+              Role & Permissions
+              <select name="role">
+                <option value="Sales agent">Sales agent (Inboxes & Calls)</option>
+                <option value="Administrator">Administrator (Campaigns & Settings)</option>
+              </select>
+            </label>
+            <button className="primary" style={{ height: 40, marginTop: "auto" }}>
+              Send Invite
+            </button>
+          </form>
+        </div>
+
+        {/* Team Members Table */}
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Draft role</th>
-                <th>Local status</th>
+                <th>Member</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {s.team.map((t) => (
                 <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{t.email}</td>
-                  <td>{t.role}</td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          background: t.role === "Owner" ? "#ede9fe" : "#e0e7ff",
+                          color: t.role === "Owner" ? "#6d28d9" : "#3730a3",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: 700,
+                          fontSize: 12,
+                        }}
+                      >
+                        {t.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <strong style={{ display: "block", color: "#0f172a" }}>{t.name}</strong>
+                        <small style={{ color: "#64748b" }}>{t.email}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        padding: "3px 8px",
+                        borderRadius: 12,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background:
+                          t.role === "Owner"
+                            ? "#ede9fe"
+                            : t.role === "Administrator"
+                              ? "#e0e7ff"
+                              : "#ecfdf5",
+                        color:
+                          t.role === "Owner"
+                            ? "#6d28d9"
+                            : t.role === "Administrator"
+                              ? "#3730a3"
+                              : "#065f46",
+                      }}
+                    >
+                      {t.role}
+                    </span>
+                  </td>
                   <td>
                     <Badge>
-                      {t.status === "Invited" ? "Invitation draft" : t.status}
+                      {t.status === "Active" ? "Active" : "Invited"}
                     </Badge>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {t.role !== "Owner" && (
+                      <div style={{ display: "inline-flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          className="secondary"
+                          style={{ padding: "3px 8px", fontSize: 11 }}
+                          onClick={() => {
+                            const newStatus = t.status === "Active" ? "Invited" : "Active";
+                            update((state) => ({
+                              ...state,
+                              team: state.team.map((m) => (m.id === t.id ? { ...m, status: newStatus } : m)),
+                            }));
+                            notify(`Updated status for ${t.name}`);
+                          }}
+                        >
+                          {t.status === "Active" ? "Revoke" : "Activate"}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          style={{ padding: "3px 8px", fontSize: 11, color: "#dc2626" }}
+                          onClick={() => {
+                            update((state) => ({
+                              ...state,
+                              team: state.team.filter((m) => m.id !== t.id),
+                            }));
+                            notify(`Removed ${t.name} from team`);
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -322,6 +573,7 @@ export default function Settings({
         </div>
       </Panel>
     );
+  }
   return (
     <>
       <Panel

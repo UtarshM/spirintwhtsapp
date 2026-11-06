@@ -125,7 +125,18 @@ const threadSchema = z.object({
 const agentSchema = z.object({
   id: identifier,
   name: z.string().trim().min(1).max(200),
-  language: z.enum(["English", "Hindi"]),
+  language: z.enum([
+    "English",
+    "Hindi",
+    "Marathi",
+    "Gujarati",
+    "Tamil",
+    "Telugu",
+    "Bengali",
+    "Kannada",
+    "Punjabi",
+    "Malayalam",
+  ]),
   voice: short,
   instructions: z.string().max(10000),
   knowledge: z.string().max(30000),
@@ -134,6 +145,11 @@ const agentSchema = z.object({
   concurrency: z.number().int().min(1).max(20),
   handoff: short,
   updatedAt: timestamp,
+  agentType: z.enum(["Conversational", "Scripted", "IVR Menu"]).optional(),
+  personality: z.string().max(100).optional(),
+  speed: z.number().min(0.5).max(2.0).optional(),
+  pronunciation: z.string().max(2000).optional(),
+  greeting: z.string().max(1000).optional(),
 });
 const callSchema = z.object({
   id: identifier,

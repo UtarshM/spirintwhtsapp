@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import type { AccountIdentity } from "@/lib/workspace-document";
 import { Panel, Badge } from "./ui";
+import ConnectionControls from "./connection-controls";
+import type { IntegrationConfig } from "@/lib/integration-config";
 const integrations = [
   [
     "meta",
@@ -71,9 +73,14 @@ export default function IntegrationReadiness({
       { provider: string; status: string }[]
     >([]),
     [error, setError] = useState(""),
-    [loaded, setLoaded] = useState(false);
+    [loaded, setLoaded] = useState(false),
+    [configuration, setConfiguration] = useState<IntegrationConfig[]>([]),
+    [aiConfigured, setAiConfigured] = useState(false),
+    [refresh, setRefresh] = useState(0);
   useEffect(() => {
     if (!account) return;
+    setLoaded(false);
+    setError("");
     const controller = new AbortController();
     void fetch("/api/integrations/status", {
       cache: "no-store",
@@ -87,17 +94,33 @@ export default function IntegrationReadiness({
             result.error?.message || "Integration records unavailable.",
           );
         setRecords(result.integrations);
+        setConfiguration(result.configuration || []);
+        setAiConfigured(Boolean(result.ai?.configured));
         setLoaded(true);
       })
       .catch((error) => {
         if (!controller.signal.aborted) setError(error.message);
       });
     return () => controller.abort();
-  }, [account?.workspaceId]);
+  }, [account?.workspaceId, refresh]);
   return (
     <Panel
       title="Integrations & completion status"
       description="Review account connections and remaining setup for each channel."
+      action={
+        account ? (
+          <button
+            className="secondary"
+            onClick={() => setRefresh((v) => v + 1)}
+          >
+            Refresh status
+          </button>
+        ) : (
+          <a className="secondary" href="/account#integrations">
+            Sign in to connect accounts
+          </a>
+        )
+      }
     >
       {error && (
         <div className="console-error" role="alert">
@@ -106,15 +129,21 @@ export default function IntegrationReadiness({
       )}
       <div className="console-ai-box" style={{ marginBottom: "20px" }}>
         <div className="console-ai-header">
-          <span className="console-ai-title">
-            🤖 Central AI Engine: Included & Active
-          </span>
-          <span className="console-ai-hint">
-            Powered by AWS Bedrock (Claude) · Zero setup required for tenants
-          </span>
+          <span className="console-ai-title">Central AI service</span>
+          <Badge>
+            {loaded
+              ? aiConfigured
+                ? "Configured · Provider access unverified"
+                : "Server setup required"
+              : account
+                ? "Status unavailable until loaded"
+                : "Sign in to check configuration"}
+          </Badge>
         </div>
-        <p style={{ margin: "6px 0 0 0", fontSize: "12px", color: "#334155", lineHeight: 1.6 }}>
-          All generative AI intelligence, template copywriting, WhatsApp inbound agent reasoning, and post-call analytics are built-in and operated by Sprint. You only need to connect your three communication channels below (<strong>WhatsApp</strong>, <strong>Plivo Calling</strong>, and <strong>Email</strong>) to manage all sales and support operations from this dashboard.
+        <p>
+          AI configuration is managed by Sprint. Configuration does not
+          establish that model access, usage limits or provider acceptance
+          checks have passed.
         </p>
       </div>
       <div className="console-card-grid">
@@ -142,6 +171,20 @@ export default function IntegrationReadiness({
               <br />
               {missing}
             </p>
+            {account && configuration.find((c) => c.provider === key) && (
+              <ConnectionControls
+                account={account}
+                config={configuration.find((c) => c.provider === key)!}
+              />
+            )}
+            {loaded &&
+              configuration.find((c) => c.provider === key)?.implemented ===
+                false && (
+                <p className="integration-config-note">
+                  Live account connection is not implemented for this module
+                  yet.
+                </p>
+              )}
             <button className="secondary" onClick={() => navigate(target)}>
               Review {title}
             </button>
@@ -149,8 +192,8 @@ export default function IntegrationReadiness({
         ))}
       </div>
       <p>
-        No live sends, calls or checkout are enabled. Connecting credentials
-        alone does not complete the acceptance tests.
+        Authorization does not enable live sends, calls or checkout. Connecting
+        credentials alone does not complete the acceptance tests.
       </p>
     </Panel>
   );
