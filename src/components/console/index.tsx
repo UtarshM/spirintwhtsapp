@@ -901,7 +901,7 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
               <Menu size={20} />
             </button>
             <div className="rapid-topbar-breadcrumb">
-              <span>{(!s.settings?.name || s.settings.name === "Rapid Sales" || s.settings.name === "Scalezix workspace") ? "Sprint" : s.settings.name}</span>
+              <span>{(!s.settings?.name || s.settings.name === "Rapid Sales" || s.settings.name === "Sprint" || s.settings.name === "Scalezix workspace") ? "Leadpilot" : s.settings.name}</span>
               <span>/</span>
               <strong>{names[page] || "Dashboard"}</strong>
             </div>
@@ -1107,13 +1107,13 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
           )}
 
           {!ready ? (
-            <Empty>Loading your Sprint workspace…</Empty>
+            <Empty>Loading your Leadpilot workspace…</Empty>
           ) : (
             <div key={page}>
               {page !== "overview" && (
                 <div className="console-page-title">
                   <span className="console-overline">
-                    SPRINT OUTREACH
+                    LEADPILOT OUTREACH
                   </span>
                   <h1>{names[page]}</h1>
                 </div>
@@ -1124,7 +1124,7 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         </div>
 
         <footer className="console-footer">
-          Sprint Automation Platform · <span>AI Calling · WhatsApp · Cold Email</span>
+          Leadpilot Automation Platform · <span>AI Calling · WhatsApp · Cold Email</span>
         </footer>
       </main>
 

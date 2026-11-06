@@ -193,7 +193,7 @@ export default function CommandPalette({
             <span><kbd>↵</kbd> select</span>
             <span><kbd>esc</kbd> close</span>
           </div>
-          <span className="command-palette-brand">Sprint</span>
+          <span className="command-palette-brand">Leadpilot</span>
         </footer>
       </div>
     </div>

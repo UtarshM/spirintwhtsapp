@@ -250,7 +250,7 @@ export default function SaaSAdmin({
   return (
     <Panel
       title="SaaS Founder & Platform Management"
-      description="Manage all onboarded Startups, Companies, and MSMEs using your Scalezix outreach platform, subscriptions, and wholesale margins."
+      description="Manage all onboarded Startups, Companies, and MSMEs using your Leadpilot outreach platform, subscriptions, and wholesale margins."
       action={
         <button
           type="button"
@@ -282,7 +282,7 @@ export default function SaaSAdmin({
               <span>PLATFORM FOUNDER DASHBOARD · B2B SAAS MODE</span>
             </div>
             <h2 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 8px" }}>
-              Scalezix Outreach SaaS Ecosystem
+              Leadpilot Outreach SaaS Ecosystem
             </h2>
             <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, margin: 0, lineHeight: 1.5 }}>
               You are the platform owner. Each company below runs inside their own fully isolated private workspace with independent campaigns, dedicated WhatsApp numbers, AI voice agents, and lead CRM.

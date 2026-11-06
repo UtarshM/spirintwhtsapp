@@ -141,7 +141,7 @@ export async function generateCampaignCopy(
     const isWa = req.channel === "WhatsApp";
     const bodyText = isWa
       ? `Hi {{first_name}}, discover how ${req.topic} can accelerate your pipeline! Reply or click below for early access.`
-      : `Hi {{first_name}},\n\nWe are pleased to introduce ${req.topic}. Let us know if you'd like a quick 10-minute walkthrough.\n\nBest regards,\nSprint Team`;
+      : `Hi {{first_name}},\n\nWe are pleased to introduce ${req.topic}. Let us know if you'd like a quick 10-minute walkthrough.\n\nBest regards,\nLeadpilot Team`;
     return {
       text: bodyText,
       body: bodyText,
@@ -280,12 +280,12 @@ export async function runWhatsAppAgentReply(
     return fallbackReply();
   }
 
-  const systemPrompt = `You are "${req.agentName || "Sprint AI Agent"}", a knowledgeable, courteous, and proactive business assistant for WhatsApp.
+  const systemPrompt = `You are "${req.agentName || "Leadpilot AI Agent"}", a knowledgeable, courteous, and proactive business assistant for WhatsApp.
 Business Instructions:
 ${req.instructions || "Help customer with inquiries, qualify lead interest, and offer product walkthroughs."}
 
 Knowledge Base:
-${req.knowledge || "Sprint by Scalezix provides tri-channel sales automation (WhatsApp, Email, AI Calling) starting at ₹3,000/month."}
+${req.knowledge || "Leadpilot provides tri-channel sales automation (WhatsApp, Email, AI Calling) starting at ₹3,000/month."}
 
 Handoff Protocol:
 ${req.handoff || "If customer asks for enterprise custom pricing or specifically asks to speak with a human agent, set handoff to true."}

@@ -1,15 +1,12 @@
 "use client";
 import { useState } from "react";
 import {
-  ArrowRight,
   ShieldCheck,
   Eye,
   EyeOff,
   Phone,
   MessageSquare,
-  Sparkles,
-  Users,
-  CheckCircle,
+  Target,
 } from "lucide-react";
 import RapidSalesLogo from "./console/rapid-logo";
 
@@ -24,82 +21,76 @@ export default function AuthForm({
 
   return (
     <div className="login-layout">
-      {/* Sprint Left Story Hero */}
+      {/* Leadpilot Left Story Hero */}
       <aside className="login-story">
-        <a href="/" className="login-symbol" aria-label="Sprint Home">
-          <RapidSalesLogo size={32} />
-        </a>
+        <div>
+          <a href="/" className="login-symbol" aria-label="Leadpilot Home">
+            <RapidSalesLogo size={32} />
+          </a>
 
-        <div className="login-story-copy">
-          <span className="login-overline">AI SALES OUTREACH</span>
-          <h2>Sales outreach that runs itself.</h2>
-          <p>AI agents that call, message and qualify your leads around the clock.</p>
-        </div>
-
-        <div className="rapid-login-cards-list">
-          <div className="rapid-login-card">
-            <div className="rapid-login-card-icon phone">
-              <Phone size={18} />
-            </div>
-            <div>
-              <strong>1,000+ AI calls a day</strong>
-              <p>Natural-sounding agents in English, Hindi, and Indian languages.</p>
-            </div>
+          <div className="login-story-copy">
+            <h2>Sales outreach that runs itself.</h2>
+            <p>AI agents that call, message and qualify your leads around the clock.</p>
           </div>
 
-          <div className="rapid-login-card">
-            <div className="rapid-login-card-icon whatsapp">
-              <MessageSquare size={18} />
+          <div className="rapid-login-cards-list">
+            <div className="rapid-login-card">
+              <div className="rapid-login-card-icon">
+                <Phone size={18} />
+              </div>
+              <div>
+                <strong>1,000+ AI calls a day</strong>
+                <p>Natural-sounding agents in English and Indian languages.</p>
+              </div>
             </div>
-            <div>
-              <strong>Email, WhatsApp and calling together</strong>
-              <p>One unified sequence across every channel your leads use.</p>
-            </div>
-          </div>
 
-          <div className="rapid-login-card">
-            <div className="rapid-login-card-icon leads">
-              <Sparkles size={18} />
+            <div className="rapid-login-card">
+              <div className="rapid-login-card-icon">
+                <MessageSquare size={18} />
+              </div>
+              <div>
+                <strong>Email, WhatsApp and calling together</strong>
+                <p>One sequence across every channel your leads use.</p>
+              </div>
             </div>
-            <div>
-              <strong>Qualified leads, automatically</strong>
-              <p>Every reply is classified and routed to your closers instantly.</p>
+
+            <div className="rapid-login-card">
+              <div className="rapid-login-card-icon">
+                <Target size={18} />
+              </div>
+              <div>
+                <strong>Qualified leads, automatically</strong>
+                <p>Every reply is classified and routed to the right next step.</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="rapid-login-trust">
-          <CheckCircle size={15} className="text-emerald-400" />
-          <span>Trusted by 500+ businesses & agencies</span>
-        </div>
-
-        <div className="login-story-footer">
-          <span>© {new Date().getFullYear()} Sprint by Scalezix</span>
-          <i />
-          <span>Privacy</span>
-          <i />
-          <span>Terms</span>
+        <div className="login-story-footer-bar">
+          <span>Trusted by 500+ businesses</span>
+          <span>© {new Date().getFullYear()} Leadpilot</span>
         </div>
       </aside>
 
       {/* Right Form Side */}
       <section className="login-form-side">
         <div className="login-signup-prompt">
-          {mode === "signup" ? "Already have an account?" : "No account?"}{" "}
-          <a href={mode === "signup" ? "/login" : "/signup"}>
-            {mode === "signup" ? "Sign in" : "Sign up"}
-          </a>
+          {mode === "signup" ? (
+            <>
+              Already have an account? <a href="/login">Sign in</a>
+            </>
+          ) : mode === "recover" ? (
+            <>
+              Remembered your password? <a href="/login">Sign in</a>
+            </>
+          ) : (
+            <>
+              No account? <a href="/signup">Sign up</a>
+            </>
+          )}
         </div>
 
         <div className="login-form-inner">
-          <span className="login-overline">
-            {mode === "login"
-              ? "WORKSPACE ACCESS"
-              : mode === "signup"
-                ? "GET STARTED"
-                : "ACCOUNT RECOVERY"}
-          </span>
-
           <h1>
             {mode === "login"
               ? "Welcome back"
@@ -110,7 +101,7 @@ export default function AuthForm({
 
           <p>
             {mode === "login"
-              ? "Sign in to your Sprint workspace."
+              ? "Sign in to your Leadpilot workspace."
               : mode === "signup"
                 ? "Start automating your outreach across WhatsApp, Email & AI Calls."
                 : "We'll email you a secure link to reset your password."}
@@ -203,10 +194,10 @@ export default function AuthForm({
 
             {mode !== "recover" && (
               <label>
-                <div className="flex justify-between items-center mb-1">
+                <div className="login-password-header">
                   <span>Password</span>
                   {mode === "login" && (
-                    <a href="/recover" className="text-xs text-orange-600 hover:underline">
+                    <a href="/recover" className="login-forgot-link">
                       Forgot password?
                     </a>
                   )}
@@ -215,7 +206,7 @@ export default function AuthForm({
                   <input
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
+                    placeholder="••••••••"
                     required
                     minLength={mode === "signup" ? 8 : undefined}
                     autoComplete={
@@ -232,19 +223,21 @@ export default function AuthForm({
                   </button>
                 </span>
                 {mode === "signup" && (
-                  <small>Use at least 8 characters with numbers & symbols.</small>
+                  <small style={{ color: "#64748b", marginTop: "4px" }}>
+                    Use at least 8 characters with numbers & symbols.
+                  </small>
                 )}
               </label>
             )}
 
             {mode === "login" && (
-              <label className="flex items-center gap-2 cursor-pointer mt-1 text-xs text-slate-600">
+              <label className="login-checkbox-row">
                 <input type="checkbox" defaultChecked name="remember" />
                 <span>Keep me signed in</span>
               </label>
             )}
 
-            <button className="primary mt-3" disabled={busy}>
+            <button type="submit" className="login-submit-btn" disabled={busy}>
               {busy
                 ? "Connecting…"
                 : mode === "login"
@@ -252,32 +245,27 @@ export default function AuthForm({
                   : mode === "signup"
                     ? "Create Workspace"
                     : "Send Recovery Link"}
-              <ArrowRight size={16} />
             </button>
           </form>
 
           {status && (
-            <div className="notice" role="status">
+            <div className="notice" role="status" style={{ marginTop: 16 }}>
               <ShieldCheck size={17} />
               {status}
             </div>
           )}
 
-          <div className="login-terms-notice text-xs text-slate-500 mt-6 text-center">
+          <div className="login-terms-notice">
             By signing in you agree to our{" "}
-            <a href="/terms-and-conditions" className="underline hover:text-slate-700">
+            <a href="/terms-and-conditions">
               Terms of Service
             </a>{" "}
             and{" "}
-            <a href="/privacy-policy" className="underline hover:text-slate-700">
+            <a href="/privacy-policy">
               Privacy Policy
             </a>
             .
           </div>
-
-          <a className="login-home-link" href="/">
-            ← Back to website
-          </a>
         </div>
       </section>
     </div>

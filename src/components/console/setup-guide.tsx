@@ -114,7 +114,7 @@ export default function SetupGuide({
       <aside
         className="setup-guide-drawer"
         role="dialog"
-        aria-label="Sprint Setup Guide"
+        aria-label="Leadpilot Setup Guide"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="setup-guide-header">

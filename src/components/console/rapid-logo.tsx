@@ -35,7 +35,7 @@ export function RapidLogoIcon({ size = 32 }: { size?: number }) {
   );
 }
 
-export default function RapidSalesLogo({
+export default function LeadpilotLogo({
   collapsed = false,
   size = 30,
 }: {
@@ -47,12 +47,12 @@ export default function RapidSalesLogo({
       <RapidLogoIcon size={size} />
       {!collapsed && (
         <span className="rapid-sales-brand-text">
-          Sprint
+          Leadpilot
         </span>
       )}
     </div>
   );
 }
 
-export { RapidSalesLogo as SprintLogo };
+export { LeadpilotLogo as RapidSalesLogo, LeadpilotLogo as SprintLogo };
 

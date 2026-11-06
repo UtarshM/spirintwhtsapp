@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-/** Shared Sprint logo mark for product identity */
+/** Shared Leadpilot logo mark for product identity */
 export default function SalesMark({ size = 24, style }: { size?: number; style?: CSSProperties }) {
   return (
     <svg

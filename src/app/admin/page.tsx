@@ -59,7 +59,7 @@ export default function AdminPage() {
               <RapidSalesLogo size={22} />
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontWeight: 700, fontSize: 16, color: "#fff", letterSpacing: "-0.3px" }}>
-                  Scalezix Super Admin
+                  Leadpilot Super Admin
                 </span>
                 <span
                   style={{

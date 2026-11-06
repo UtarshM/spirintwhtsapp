@@ -297,8 +297,8 @@ export function createLocalWorkspace(): LocalWorkspace {
     resources: [],
     sequenceRuns: [],
     settings: {
-      name: "Scalezix workspace",
-      product: "Sprint",
+      name: "Leadpilot workspace",
+      product: "Leadpilot",
       timezone: "Asia/Kolkata",
       stages: ["New", "Contacted", "Replied", "Qualified", "Not interested"],
       lowBalance: 100,

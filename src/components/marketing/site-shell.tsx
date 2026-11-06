@@ -44,12 +44,12 @@ export function ProductIcon({
 }
 export function Logo() {
   return (
-    <Link href="/" className="site-logo" aria-label="Sprint home">
+    <Link href="/" className="site-logo" aria-label="Leadpilot home">
       <span>
         <SalesMark size={28} />
       </span>
       <strong style={{ fontSize: "20px", fontWeight: "750", letterSpacing: "-0.5px" }}>
-        Sprint
+        Leadpilot
       </strong>
     </Link>
   );
@@ -274,7 +274,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           ))}
         </div>
         <div className="site-footer-bottom">
-          <span>© {new Date().getFullYear()} Sprint by Scalezix.</span>
+          <span>© {new Date().getFullYear()} Leadpilot.</span>
           <div>
             <Link href="/privacy-policy">Privacy draft</Link>
             <Link href="/terms-and-conditions">Terms draft</Link>
