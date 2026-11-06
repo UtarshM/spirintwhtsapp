@@ -18,7 +18,7 @@ export default function RapidMascot({
           <div className="rapid-mascot-bubble-header">
             <div className="flex items-center gap-2">
               <Sparkles size={14} className="text-amber-500" />
-              <strong>Rapid Copilot</strong>
+              <strong>Sprint Copilot</strong>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -80,8 +80,8 @@ export default function RapidMascot({
         type="button"
         className="rapid-mascot-trigger"
         onClick={() => setOpen((v) => !v)}
-        title="Chat with Rapid Copilot"
-        aria-label="Rapid Copilot AI Assistant"
+        title="Chat with Sprint Copilot"
+        aria-label="Sprint Copilot AI Assistant"
       >
         {/* Animated Cute Blue Robot SVG */}
         <svg
