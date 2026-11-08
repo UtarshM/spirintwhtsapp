@@ -44,11 +44,13 @@ export default function Campaigns({
   initialStatus = "",
   view = "campaigns",
   notify,
+  navigate,
 }: {
   channel?: Channel;
   initialStatus?: string;
   view?: "campaigns" | "leads";
   notify: (s: string) => void;
+  navigate?: (page: string) => void;
 }) {
   const { state: s, update } = useWorkspace();
   const [edit, setEdit] = useState<LocalCampaign | null | undefined>(),
@@ -56,7 +58,8 @@ export default function Campaigns({
     [query, setQuery] = useState(""),
     [statusFilter, setStatusFilter] = useState(initialStatus),
     [selected, setSelected] = useState<string[]>([]),
-    [kind, setKind] = useState<Channel>(channel || "WhatsApp");
+    [kind, setKind] = useState<Channel>(channel || "WhatsApp"),
+    [noSequenceModalOpen, setNoSequenceModalOpen] = useState(false);
 
   // Lead-specific filters
   const [leadOutcomeFilter, setLeadOutcomeFilter] = useState<string>("");
@@ -71,6 +74,10 @@ export default function Campaigns({
       c.name.toLowerCase().includes(query.toLowerCase()),
   );
   const open = (c: LocalCampaign | null) => {
+    if (!c && s.sequences.length === 0) {
+      setNoSequenceModalOpen(true);
+      return;
+    }
     setKind(c?.channel || channel || "WhatsApp");
     setSelected(c?.contactIds || []);
     setEdit(c);
@@ -630,6 +637,38 @@ export default function Campaigns({
         <Empty>
           No campaigns found matching your filter criteria. Click &quot;New Campaign&quot; to build one.
         </Empty>
+      )}
+      {noSequenceModalOpen && (
+        <Modal
+          title="Create a sequence first"
+          close={() => setNoSequenceModalOpen(false)}
+        >
+          <div style={{ maxWidth: 440, margin: "0 auto" }}>
+            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px", lineHeight: 1.5 }}>
+              You don&apos;t have any sequences yet. A campaign needs a sequence to run against — build one in the Sequence Builder and then come back here to launch your campaign.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setNoSequenceModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary"
+                style={{ background: "#2563eb", color: "#fff" }}
+                onClick={() => {
+                  setNoSequenceModalOpen(false);
+                  if (navigate) navigate("sequences");
+                }}
+              >
+                Create Sequence
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
       {edit !== undefined && (
         <Modal

@@ -360,6 +360,7 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         channel={page === "wa-broadcast" ? "WhatsApp" : undefined}
         view={page === "audience-review" ? "leads" : "campaigns"}
         notify={notify}
+        navigate={navigate}
       />
     );
   else if (page === "sequences") content = <Sequences notify={notify} />;
