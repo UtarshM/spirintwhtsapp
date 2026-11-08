@@ -144,6 +144,19 @@ export default function Contacts({
             >
               New segment
             </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() =>
+                download(
+                  "leadpilot-contacts-template.csv",
+                  "name,email,phone,company,stage,consent\nRahul Sharma,rahul@example.com,+919876543210,Apex Global,New,true\nPooja Patel,pooja@example.com,+919876543211,Nexus Corp,Interested,true",
+                  "text/csv",
+                )
+              }
+            >
+              Sample CSV
+            </button>
             <label className="secondary console-file">
               Import CSV
               <input
@@ -172,7 +185,7 @@ export default function Contacts({
           </div>
         }
       >
-      {/* RapidSales Subtabs for Qualified Leads */}
+      {/* Leadpilot Subtabs for Qualified Leads */}
       {qualified && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18, borderBottom: "1px solid #e2e8f0", paddingBottom: 10 }}>
           {[
@@ -869,11 +882,10 @@ export default function Contacts({
               try {
                 const f = new FormData(e.currentTarget);
                 const rawPhone = formValue(f, "phone").replace(/[\s\-\(\)]/g, "");
+                const dialCode = formValue(f, "dialCode") || "+91";
                 let normalizedPhone = rawPhone;
-                if (/^\d{10}$/.test(rawPhone)) {
-                  normalizedPhone = `+91${rawPhone}`;
-                } else if (/^0\d{10}$/.test(rawPhone)) {
-                  normalizedPhone = `+91${rawPhone.slice(1)}`;
+                if (rawPhone && !rawPhone.startsWith("+")) {
+                  normalizedPhone = `${dialCode}${rawPhone.replace(/^0+/, "")}`;
                 }
 
                 const contact = localContactSchema.parse({
@@ -961,12 +973,23 @@ export default function Contacts({
                 <input name="email" type="email" defaultValue={edit?.email} />
               </label>
               <label>
-                International phone
-                <input
-                  name="phone"
-                  defaultValue={edit?.phone}
-                  placeholder="+91…"
-                />
+                Phone (with Country Dial Code)
+                <div style={{ display: "flex", gap: 6 }}>
+                  <select name="dialCode" defaultValue="+91" style={{ width: 100, borderRadius: 8, border: "1px solid #cbd5e1", padding: "0 6px", fontSize: 13 }}>
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+971">🇦🇪 +971</option>
+                    <option value="+65">🇸🇬 +65</option>
+                    <option value="+61">🇦🇺 +61</option>
+                  </select>
+                  <input
+                    name="phone"
+                    defaultValue={edit?.phone?.replace(/^\+\d{1,4}/, "") || edit?.phone}
+                    placeholder="10-digit number e.g. 9876543210"
+                    style={{ flex: 1 }}
+                  />
+                </div>
               </label>
             </div>
             <label>
@@ -981,7 +1004,7 @@ export default function Contacts({
               Owner
               <select
                 name="owner"
-                defaultValue={edit?.owner || "Scalezix team"}
+                defaultValue={edit?.owner || "Leadpilot team"}
               >
                 {s.team.map((t) => (
                   <option key={t.id}>{t.name}</option>

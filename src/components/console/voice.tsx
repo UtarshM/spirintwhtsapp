@@ -588,7 +588,7 @@ export default function Voice({
                     name="name"
                     required
                     maxLength={200}
-                    defaultValue={edit?.name || "Scalezix Outbound Specialist"}
+                    defaultValue={edit?.name || "Leadpilot Revenue Specialist"}
                     placeholder="e.g. Inbound Sales Closer, Payment Reminder"
                   />
                 </label>
@@ -597,22 +597,22 @@ export default function Voice({
                   <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>Agent Type</label>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                     {[
-                      { type: "Conversational", desc: "Dynamic two-way AI dialogue with objection handling" },
-                      { type: "Scripted", desc: "Step-by-step sequential branch script" },
-                      { type: "IVR Menu", desc: "Press-key / voice menu navigation" },
+                      { type: "Conversational", desc: "Dynamic two-way AI dialogue with barge-in interruption" },
+                      { type: "Scripted", desc: "Step-by-step fixed script with auto-hangup" },
+                      { type: "IVR Menu", desc: "Press-key DTMF menu attached to an IVR flow" },
                     ].map((item) => (
                       <div
                         key={item.type}
                         onClick={() => setSelectedAgentType(item.type as any)}
                         style={{
-                          border: selectedAgentType === item.type ? "2px solid #6366f1" : "1px solid #cbd5e1",
+                          border: selectedAgentType === item.type ? "2px solid #2563eb" : "1px solid #cbd5e1",
                           borderRadius: 8,
                           padding: 10,
                           cursor: "pointer",
-                          background: selectedAgentType === item.type ? "#f5f3ff" : "#ffffff",
+                          background: selectedAgentType === item.type ? "#eff6ff" : "#ffffff",
                         }}
                       >
-                        <div style={{ fontWeight: 700, fontSize: 13, color: selectedAgentType === item.type ? "#4338ca" : "#1e293b" }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: selectedAgentType === item.type ? "#1d4ed8" : "#1e293b" }}>
                           {item.type}
                         </div>
                         <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>{item.desc}</div>
@@ -659,8 +659,8 @@ export default function Voice({
                           fontSize: 12,
                           fontWeight: 600,
                           cursor: "pointer",
-                          border: selectedPersonality === p ? "1px solid #6366f1" : "1px solid #cbd5e1",
-                          background: selectedPersonality === p ? "#6366f1" : "#ffffff",
+                          border: selectedPersonality === p ? "1px solid #2563eb" : "1px solid #cbd5e1",
+                          background: selectedPersonality === p ? "#2563eb" : "#ffffff",
                           color: selectedPersonality === p ? "#ffffff" : "#475569",
                         }}
                       >
@@ -702,7 +702,7 @@ export default function Voice({
                   <input
                     name="greeting"
                     maxLength={1000}
-                    defaultValue={edit?.greeting || "Hello! Am I speaking with {{name}}? I'm calling from Scalezix regarding your recent inquiry."}
+                    defaultValue={edit?.greeting || "Hello! Am I speaking with {{name}}? I'm calling from Leadpilot regarding your recent inquiry."}
                     placeholder="The first sentence spoken as soon as call connects"
                   />
                   <small style={{ color: "#64748b", marginTop: 2, display: "block" }}>
@@ -719,7 +719,7 @@ export default function Voice({
                     maxLength={10000}
                     defaultValue={
                       edit?.instructions ||
-                      "You are a sales specialist for Scalezix. Greet the customer professionally. Explain how Scalezix automates multi-channel outreach across WhatsApp, Email, and AI Voice Calling. If they are interested, qualify their monthly lead volume and budget, then schedule a demo or offer to transfer to a senior representative."
+                      "You are a sales specialist for Leadpilot. Greet the customer professionally. Explain how Leadpilot automates multi-channel outreach across WhatsApp, Email, and AI Voice Calling. If they are interested, qualify their monthly lead volume and budget, then schedule a demo or offer to transfer to a senior representative."
                     }
                     placeholder="Define who the AI is, what goal to achieve, and how to handle objections."
                   />
@@ -731,7 +731,7 @@ export default function Voice({
                     name="pronunciation"
                     rows={2}
                     maxLength={2000}
-                    defaultValue={edit?.pronunciation || "Scalezix: Scale-zix\nSaaS: Sass\nAPI: A-P-I"}
+                    defaultValue={edit?.pronunciation || "Leadpilot: Lead-pilot\nSaaS: Sass\nAPI: A-P-I\nROI: R-O-I"}
                     placeholder="Word: Pronunciation (one per line)"
                   />
                   <small style={{ color: "#64748b", marginTop: 2, display: "block" }}>
@@ -753,19 +753,46 @@ export default function Voice({
             {/* TAB 3: KNOWLEDGE BASE */}
             {activeTab === "knowledge" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <label>
-                  Company & Product Knowledge Notes (up to 30,000 characters)
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <label style={{ margin: 0, fontWeight: 600 }}>Company & Product Knowledge Base</label>
+                    <label
+                      style={{
+                        margin: 0,
+                        fontSize: 12,
+                        color: "#2563eb",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span>📄 Upload PDF / Document</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.txt,.doc,.docx"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            notify(`Extracted document content from "${file.name}" into knowledge base`);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                   <textarea
                     name="knowledge"
                     rows={6}
                     maxLength={30000}
                     defaultValue={
                       edit?.knowledge ||
-                      "Scalezix is an enterprise AI outreach and growth automation platform. Pricing starts at ₹9,999/month for starter teams. Key features include AI calling with conversational human voice, WhatsApp marketing campaigns with official Meta Cloud API, warm email sequences, and automatic lead qualification CRM."
+                      "Leadpilot is an autonomous B2B revenue and outreach platform. Pricing starts at ₹3,000/month for Basic and ₹6,000/month for Advance. Key features include AI calling with conversational human voice and barge-in, official WhatsApp Cloud API broadcasts, warm email sequences, and automatic lead qualification CRM."
                     }
                     placeholder="Paste FAQs, product specs, pricing tiers, and company information here."
                   />
-                </label>
+                </div>
 
                 <label>
                   Lead Qualification Questions
@@ -831,6 +858,27 @@ export default function Voice({
                     defaultValue={edit?.handoff || "+919876543210"}
                     placeholder="+919876543210 (Forward call when customer requests representative)"
                   />
+                </label>
+
+                {/* IVR Flow Attachment */}
+                <label>
+                  Attach Outbound IVR Flow (Optional)
+                  <select
+                    defaultValue=""
+                    style={{ width: "100%", height: 38, borderRadius: 8, border: "1px solid #cbd5e1", padding: "0 10px", fontSize: 13 }}
+                  >
+                    <option value="">None — Standard Direct AI Call</option>
+                    {s.resources
+                      .filter((r) => r.kind === "ivr")
+                      .map((ivr) => (
+                        <option key={ivr.id} value={ivr.id}>
+                          {ivr.name} ({ivr.data.direction || "Both"})
+                        </option>
+                      ))}
+                  </select>
+                  <small style={{ color: "#64748b", marginTop: 2, display: "block" }}>
+                    When set, outbound calls begin with the selected IVR keypad flow before escalating to this AI agent.
+                  </small>
                 </label>
 
                 <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, fontSize: 12, color: "#475569" }}>

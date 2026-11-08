@@ -52,6 +52,7 @@ import Templates from "./templates";
 import Inbox from "./inbox";
 import Sequences from "./sequences";
 import Voice from "./voice";
+import IvrBuilder from "./ivr-builder";
 import Resources from "./resources";
 import Links from "./links";
 import Bots from "./bots";
@@ -406,6 +407,7 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         notify={notify}
       />
     );
+  else if (page === "ivr") content = <IvrBuilder notify={notify} />;
   else if (["links", "qr", "widget"].includes(page))
     content = <Links key={page} mode={page} notify={notify} />;
   else if (page === "bots") content = <Bots notify={notify} />;
