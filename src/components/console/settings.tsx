@@ -29,80 +29,213 @@ export default function Settings({
     return (
       <>
         <Panel
-          title="Subscription & credits"
-          description="All credits here are sample units with no monetary value. No payment can be made in this workspace."
+          title="Billing & Subscription Plans"
+          description="Your active subscription plan, shared credit wallet and usage ledger."
         >
-          <div className="console-status-grid">
-            <div>
-              <strong>
-                {s.transactions.reduce((sum, t) => sum + t.credits, 0)}
-              </strong>
-              <small>Sample balance</small>
+          {/* RapidSales Current Plan Overview Card */}
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: "18px 20px",
+              marginBottom: 20,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>CURRENT SUBSCRIPTION</span>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "4px 0 2px" }}>
+                  Leadpilot Advance Plan
+                </h3>
+                <span style={{ fontSize: 12, color: "#059669", fontWeight: 600 }}>Active · Renews on 9 Dec 2026</span>
+              </div>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: 12,
+                  background: "#dcfce7",
+                  color: "#166534",
+                }}
+              >
+                PLATFORM ACTIVE
+              </span>
             </div>
-            <div>
-              <strong>
-                {
-                  -s.transactions
-                    .filter((t) => t.credits < 0)
-                    .reduce((sum, t) => sum + t.credits, 0)
-                }
-              </strong>
-              <small>Sample usage</small>
-            </div>
-            <div>
-              <strong>{s.settings.lowBalance}</strong>
-              <small>Low-balance threshold</small>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, paddingTop: 14, borderTop: "1px solid #f1f5f9" }}>
+              <div>
+                <span style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase" }}>Wallet Balance</span>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#2563eb" }}>
+                  {s.transactions.reduce((sum, t) => sum + t.credits, 0).toLocaleString("en-IN")} Credits
+                </div>
+                <small style={{ fontSize: 11, color: "#64748b" }}>1 credit = ₹1 usage</small>
+              </div>
+              <div>
+                <span style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase" }}>Monthly Included</span>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>250 Credits</div>
+                <small style={{ fontSize: 11, color: "#64748b" }}>Resets every billing cycle</small>
+              </div>
+              <div>
+                <span style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase" }}>Total Consumed</span>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
+                  {-s.transactions.filter((t) => t.credits < 0).reduce((sum, t) => sum + t.credits, 0).toLocaleString("en-IN")} Credits
+                </div>
+                <small style={{ fontSize: 11, color: "#64748b" }}>Calls, WhatsApp & Email</small>
+              </div>
+              <div>
+                <span style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase" }}>Billing Cycle</span>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>Monthly (₹6,000)</div>
+                <small style={{ fontSize: 11, color: "#64748b" }}>GST compliant invoice</small>
+              </div>
             </div>
           </div>
-          <div className="console-card-grid">
+
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "24px 0 6px" }}>
+            Choose Your Plan
+          </h3>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 16px" }}>
+            Plan price is the platform fee only. WhatsApp, email and AI voice calling usage are charged from your shared credits.
+          </p>
+
+          <div className="console-card-grid" style={{ marginBottom: 24 }}>
             {[
-              ["Connect", 2999],
-              ["Grow", 3999],
-              ["Scale", 9999],
-            ].map(([name, price]) => (
-              <article className="console-mini-card" key={name}>
-                <h3>{name}</h3>
-                <strong>
-                  ₹{Number(price).toLocaleString("en-IN")}/month + GST
-                </strong>
-                <p>
-                  Platform plan draft. Usage billed separately at approved
-                  production rates later.
+              {
+                name: "Basic",
+                price: 3000,
+                credits: 100,
+                desc: "Best for getting started with multi-channel outreach",
+                popular: false,
+                features: [
+                  "100 Shared Credits included",
+                  "2 AI Calling languages & 4 voices",
+                  "2 Email accounts connection",
+                  "WhatsApp Broadcasts & Webhooks",
+                  "Unlimited audience segments",
+                  "Single user workspace",
+                ],
+              },
+              {
+                name: "Advance",
+                price: 6000,
+                credits: 250,
+                desc: "Perfect for high-growth businesses and scaling teams",
+                popular: true,
+                features: [
+                  "250 Shared Credits included",
+                  "4 AI Calling languages & 8 voices",
+                  "5 Email accounts connection",
+                  "AI WhatsApp Auto-Reply & Knowledge Base",
+                  "Shopify & Razorpay automated drips",
+                  "Multi-seat team assignment",
+                ],
+              },
+              {
+                name: "Pro",
+                price: 12000,
+                credits: 500,
+                desc: "High volume enterprise autonomous outreach machine",
+                popular: false,
+                features: [
+                  "500 Shared Credits included",
+                  "10 AI Calling languages & 20 voices",
+                  "10 Email accounts connection",
+                  "3,000 Call Recording minutes",
+                  "WhatsApp Official Blue Tick (OBA) filing",
+                  "Dedicated priority routing gateway",
+                ],
+              },
+            ].map((plan) => (
+              <article
+                className="console-mini-card"
+                key={plan.name}
+                style={{
+                  border: plan.popular ? "2px solid #2563eb" : "1px solid #cbd5e1",
+                  background: plan.popular ? "#ffffff" : "#ffffff",
+                  position: "relative",
+                  boxShadow: plan.popular ? "0 4px 14px rgba(37,99,235,0.08)" : undefined,
+                }}
+              >
+                {plan.popular && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: -10,
+                      right: 14,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 10,
+                      background: "#2563eb",
+                      color: "#fff",
+                    }}
+                  >
+                    🔥 POPULAR
+                  </span>
+                )}
+                <h3 style={{ margin: "0 0 4px" }}>{plan.name}</h3>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "6px 0 2px" }}>
+                  ₹{plan.price.toLocaleString("en-IN")}<span style={{ fontSize: 13, fontWeight: 500, color: "#64748b" }}>/mo + GST</span>
+                </div>
+                <p style={{ fontSize: 12, color: "#475569", margin: "0 0 14px", lineHeight: 1.4 }}>
+                  {plan.desc}
                 </p>
-                <button className="secondary" disabled>
-                  Checkout unavailable
+                <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 10, marginBottom: 14 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "#334155" }}>
+                    {plan.features.map((feat) => (
+                      <div key={feat} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ color: "#2563eb", fontWeight: 700 }}>✓</span>
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={plan.popular ? "primary" : "secondary"}
+                  style={{ width: "100%", background: plan.popular ? "#2563eb" : undefined, color: plan.popular ? "#fff" : undefined }}
+                  onClick={() => notify(`Selected ${plan.name} plan`)}
+                >
+                  {plan.popular ? "Current Plan" : "Select Plan"}
                 </button>
               </article>
             ))}
           </div>
-          <button
-            className="primary"
-            onClick={() => {
-              if (
-                update((state) => ({
-                  ...state,
-                  transactions: [
-                    ...state.transactions,
-                    {
-                      id: uid(),
-                      kind: "Sample top-up",
-                      credits: 500,
-                      at: now(),
-                      reference: "Free sample credits · No payment",
-                    },
-                  ],
-                }))
-              )
-                notify("500 sample credits added. No payment occurred.");
-            }}
-          >
-            Add 500 sample credits
-          </button>
-          <h3 className="console-subtitle">Orders & invoices</h3>
-          <Empty>
-            No real orders or invoices. Simulated credit additions never create
-            a payment record.
-          </Empty>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
+            <div>
+              <strong style={{ fontSize: 13, color: "#0f172a" }}>Need more usage credits?</strong>
+              <div style={{ fontSize: 12, color: "#64748b" }}>
+                Add shared credits for automated WhatsApp, cold email, and AI voice calls anytime.
+              </div>
+            </div>
+            <button
+              className="primary"
+              style={{ background: "#2563eb", color: "#fff" }}
+              onClick={() => {
+                if (
+                  update((state) => ({
+                    ...state,
+                    transactions: [
+                      ...state.transactions,
+                      {
+                        id: uid(),
+                        kind: "Sample top-up",
+                        credits: 500,
+                        at: now(),
+                        reference: "Free testing credits · Leadpilot Cloud",
+                      },
+                    ],
+                  }))
+                )
+                  notify("500 test credits added to your wallet balance!");
+              }}
+            >
+              Add 500 Credits
+            </button>
+          </div>
         </Panel>
         <Panel
           title="Sample credit ledger"
