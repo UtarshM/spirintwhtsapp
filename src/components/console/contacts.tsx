@@ -77,6 +77,28 @@ export default function Contacts({
   );
   const [segmentModal, setSegmentModal] = useState(false),
     [editSegment, setEditSegment] = useState<Resource | null>(null),
+    [segmentStatusFilter, setSegmentStatusFilter] = useState<"All" | "Active" | "Draft" | "Archived">("All"),
+    [customOutcomes, setCustomOutcomes] = useState<string[]>([
+      "Demo Booked",
+      "Callback Requested",
+      "Interested — Info",
+      "COD Confirmed",
+      "High Intent (₹50k+)",
+      "Objection — Price",
+      "Follow Up Required",
+      "Not Interested",
+    ]),
+    [newOutcomeInput, setNewOutcomeInput] = useState(""),
+    [routingStrategy, setRoutingStrategy] = useState<"round-robin" | "capacity" | "channel">("round-robin"),
+    [autoNotifyWhatsApp, setAutoNotifyWhatsApp] = useState(true),
+    [salesReps, setSalesReps] = useState([
+      { id: "1", name: "Rahul Verma", role: "Sales Lead", dailyLimit: 25, active: true, leadsToday: 12 },
+      { id: "2", name: "Pooja Patel", role: "Senior Closer", dailyLimit: 20, active: true, leadsToday: 8 },
+      { id: "3", name: "Aman Shah", role: "SDR Specialist", dailyLimit: 30, active: true, leadsToday: 19 },
+    ]),
+    [alertPhone, setAlertPhone] = useState("+919876543210"),
+    [alertWebhook, setAlertWebhook] = useState("https://hooks.slack.com/services/leadpilot/qualified"),
+    [alertEmailDigest, setAlertEmailDigest] = useState(true),
     [csvSource, setCsvSource] = useState(""),
     [mapping, setMapping] = useState<ContactColumnMapping>({
       name: "",
@@ -460,50 +482,388 @@ export default function Contacts({
           </div>
         </details>
         {segments && (
-          <div className="console-card-grid">
-            {s.resources
-              .filter((r) => r.kind === "segment")
-              .map((r) => (
-                <article className="console-mini-card" key={r.id}>
-                  <h3>{r.name}</h3>
-                  <p>{audience(s, r.data).length} matching contacts</p>
-                  <small>
-                    {Object.values(r.data).filter(Boolean).join(" · ") ||
-                      "All contacts"}
-                  </small>
-                  <button
-                    className="text-button"
-                    onClick={() => setSegment(r.id)}
-                  >
-                    Review audience
-                  </button>
-                  <button
-                    className="text-button"
-                    onClick={() => {
-                      setEditSegment(r);
-                      setSegmentModal(true);
-                    }}
-                  >
-                    Edit segment
-                  </button>
-                  <button
-                    className="text-button"
-                    onClick={() => {
-                      if (
-                        update((current) => ({
-                          ...current,
-                          resources: current.resources.filter(
-                            (x) => x.id !== r.id,
-                          ),
-                        }))
-                      )
-                        notify("Local segment removed");
-                    }}
-                  >
-                    Remove segment
-                  </button>
-                </article>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14, alignItems: "center" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginRight: 4 }}>Filter Status:</span>
+              {(["All", "Active", "Draft", "Archived"] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  className={segmentStatusFilter === st ? "primary" : "secondary"}
+                  style={{ padding: "4px 12px", fontSize: 12, borderRadius: 16 }}
+                  onClick={() => setSegmentStatusFilter(st)}
+                >
+                  {st}
+                </button>
               ))}
+            </div>
+
+            <div className="console-card-grid">
+              {s.resources
+                .filter(
+                  (r) =>
+                    r.kind === "segment" &&
+                    (segmentStatusFilter === "All" ||
+                      ((r.data.status as string) || "Active") === segmentStatusFilter)
+                )
+                .map((r) => {
+                  const segStatus = ((r.data.status as string) || "Active");
+                  return (
+                    <article className="console-mini-card" key={r.id}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                        <h3 style={{ margin: 0 }}>{r.name}</h3>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: 10,
+                            background:
+                              segStatus === "Active" ? "#dcfce7" : segStatus === "Draft" ? "#f1f5f9" : "#fee2e2",
+                            color:
+                              segStatus === "Active" ? "#166534" : segStatus === "Draft" ? "#475569" : "#991b1b",
+                          }}
+                        >
+                          {segStatus.toUpperCase()}
+                        </span>
+                      </div>
+                      <p>{audience(s, r.data).length} matching contacts</p>
+                      <small>
+                        {Object.values(r.data).filter(Boolean).join(" · ") ||
+                          "All contacts"}
+                      </small>
+                      <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                        <button
+                          className="text-button"
+                          onClick={() => setSegment(r.id)}
+                        >
+                          Review audience
+                        </button>
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setEditSegment(r);
+                            setSegmentModal(true);
+                          }}
+                        >
+                          Edit segment
+                        </button>
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            const newStatus = segStatus === "Archived" ? "Active" : "Archived";
+                            update((current) => ({
+                              ...current,
+                              resources: current.resources.map((x) =>
+                                x.id === r.id ? { ...x, data: { ...x.data, status: newStatus } } : x
+                              ),
+                            }));
+                            notify(`Segment ${r.name} marked as ${newStatus}`);
+                          }}
+                        >
+                          {segStatus === "Archived" ? "Unarchive" : "Archive"}
+                        </button>
+                        <button
+                          className="text-button"
+                          style={{ color: "#dc2626" }}
+                          onClick={() => {
+                            if (
+                              update((current) => ({
+                                ...current,
+                                resources: current.resources.filter(
+                                  (x) => x.id !== r.id,
+                                ),
+                              }))
+                            )
+                              notify("Local segment removed");
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* Qualified Leads View: Auto-Assign Tab */}
+        {qualified && crmSubTab === "Auto-Assign" && (
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, padding: 20, marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>
+                  Lead Auto-Assignment (Round-Robin Engine)
+                </h3>
+                <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+                  Automatically distribute newly qualified leads across active sales team reps in real-time.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="primary"
+                style={{ background: "#2563eb", color: "#fff", padding: "6px 14px", fontSize: 13 }}
+                onClick={() => notify("Auto-assign distribution policy updated!")}
+              >
+                Save Assignment Policy
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+              <div style={{ background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#475569", display: "block", marginBottom: 6 }}>
+                  ROUTING STRATEGY
+                </span>
+                <select
+                  value={routingStrategy}
+                  onChange={(e) => setRoutingStrategy(e.target.value as typeof routingStrategy)}
+                  style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 6, border: "1px solid #cbd5e1" }}
+                >
+                  <option value="round-robin">Round-Robin (Equal Distribution)</option>
+                  <option value="capacity">Capacity-Weighted (Prioritize reps with lower load)</option>
+                  <option value="channel">Channel-Specialized (Voice calls to Closers, WhatsApp to SDRs)</option>
+                </select>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#475569", display: "block", marginBottom: 6 }}>
+                  REP NOTIFICATIONS
+                </span>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer", marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={autoNotifyWhatsApp}
+                    onChange={(e) => setAutoNotifyWhatsApp(e.target.checked)}
+                    style={{ accentColor: "#2563eb", width: 16, height: 16 }}
+                  />
+                  <span>Send instant WhatsApp dossier to assigned rep on lead qualification</span>
+                </label>
+              </div>
+            </div>
+
+            <strong style={{ fontSize: 13, color: "#0f172a", display: "block", marginBottom: 10 }}>
+              Active Sales Reps
+            </strong>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {salesReps.map((rep) => (
+                <div
+                  key={rep.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "12px 16px",
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13 }}>
+                      {rep.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: 14, color: "#0f172a" }}>{rep.name}</strong>
+                      <span style={{ fontSize: 12, color: "#64748b", marginLeft: 8 }}>({rep.role})</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <span style={{ fontSize: 12, color: "#64748b" }}>
+                      Today: <strong style={{ color: "#0f172a" }}>{rep.leadsToday}</strong> / {rep.dailyLimit} leads
+                    </span>
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ padding: "4px 10px", fontSize: 12 }}
+                      onClick={() => {
+                        setSalesReps(salesReps.map((r) => r.id === rep.id ? { ...r, active: !r.active } : r));
+                        notify(`Updated status for ${rep.name}`);
+                      }}
+                    >
+                      {rep.active ? "Pause Assignment" : "Activate"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Qualified Leads View: Custom Outcomes Builder */}
+        {qualified && crmSubTab === "Custom outcomes" && (
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, padding: 20, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>
+              Custom Lead Outcomes & Qualification Tags
+            </h3>
+            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 16px" }}>
+              Define custom tags applied by AI Voice agents and WhatsApp automations when qualifying leads.
+            </p>
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+              <input
+                value={newOutcomeInput}
+                onChange={(e) => setNewOutcomeInput(e.target.value)}
+                placeholder="e.g. COD Confirmed, High Intent (₹1L+), Schedule Field Visit..."
+                style={{ flex: 1, height: 40, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }}
+              />
+              <button
+                type="button"
+                className="primary"
+                style={{ background: "#2563eb", color: "#fff", padding: "0 18px" }}
+                onClick={() => {
+                  if (newOutcomeInput.trim()) {
+                    setCustomOutcomes([...customOutcomes, newOutcomeInput.trim()]);
+                    setNewOutcomeInput("");
+                    notify("Added custom lead outcome tag");
+                  }
+                }}
+              >
+                Add Outcome
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {customOutcomes.map((tag) => (
+                <div
+                  key={tag}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: 20,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    color: "#1e40af",
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomOutcomes(customOutcomes.filter((t) => t !== tag));
+                      notify(`Removed outcome tag: ${tag}`);
+                    }}
+                    style={{ border: 0, background: "transparent", cursor: "pointer", color: "#3b82f6", padding: 0 }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Qualified Leads View: Buckets (Pipeline Kanban) */}
+        {qualified && crmSubTab === "Buckets" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
+            {[
+              { id: "new", title: "New Qualified", count: people.filter((p) => !p.value || p.value === 0).length, color: "#2563eb" },
+              { id: "contacted", title: "AI Contacted", count: people.filter((p) => p.tags.includes("Calls") || p.phone).length, color: "#7c3aed" },
+              { id: "demo", title: "Demo / Proposal", count: people.filter((p) => (p.value || 0) > 0).length, color: "#059669" },
+              { id: "closed", title: "Closed Won", count: people.filter((p) => p.stage === "Customer").length, color: "#0891b2" },
+            ].map((col) => (
+              <div
+                key={col.id}
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 10,
+                  padding: 14,
+                  minHeight: 260,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <strong style={{ fontSize: 13, color: "#0f172a" }}>{col.title}</strong>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: "#ffffff", border: "1px solid #cbd5e1" }}>
+                    {col.count}
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {people.slice(0, 3).map((lead) => (
+                    <div
+                      key={lead.id}
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 8,
+                        padding: 12,
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                      }}
+                    >
+                      <strong style={{ fontSize: 13, color: "#0f172a", display: "block" }}>{lead.name}</strong>
+                      <span style={{ fontSize: 11, color: "#64748b" }}>{lead.company || lead.phone || lead.email}</span>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 6, borderTop: "1px solid #f1f5f9" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#059669" }}>
+                          ₹{(lead.value || 25000).toLocaleString("en-IN")}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-button"
+                          style={{ fontSize: 11, color: "#2563eb" }}
+                          onClick={() => setEdit(lead)}
+                        >
+                          View $\rightarrow$
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Qualified Leads View: Alerts Tab */}
+        {qualified && crmSubTab === "Alerts" && (
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, padding: 20, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>
+              Lead Notifications & Webhook Alerts
+            </h3>
+            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 16px" }}>
+              Instantly alert your sales team whenever a prospect is qualified by AI.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 520 }}>
+              <label>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#334155", display: "block", marginBottom: 6 }}>
+                  WhatsApp Alert Phone Number
+                </span>
+                <input
+                  value={alertPhone}
+                  onChange={(e) => setAlertPhone(e.target.value)}
+                  placeholder="+919876543210"
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1" }}
+                />
+                <span style={{ fontSize: 11, color: "#64748b" }}>Receives instant WhatsApp summary on qualified lead</span>
+              </label>
+
+              <label>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#334155", display: "block", marginBottom: 6 }}>
+                  Slack / Discord / CRM Webhook URL
+                </span>
+                <input
+                  value={alertWebhook}
+                  onChange={(e) => setAlertWebhook(e.target.value)}
+                  placeholder="https://hooks.slack.com/services/..."
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1" }}
+                />
+                <span style={{ fontSize: 11, color: "#64748b" }}>POSTs full JSON lead payload upon qualification</span>
+              </label>
+
+              <button
+                type="button"
+                className="primary"
+                style={{ background: "#2563eb", color: "#fff", width: "fit-content", marginTop: 8 }}
+                onClick={() => notify("Lead alert triggers configured!")}
+              >
+                Save Alert Settings
+              </button>
+            </div>
           </div>
         )}
         <div className="table-scroll">
@@ -803,6 +1163,7 @@ export default function Contacts({
                   tag: formValue(f, "tag"),
                   stage: formValue(f, "stage"),
                   consent: formValue(f, "consent"),
+                  status: formValue(f, "status") || "Active",
                 },
                 updatedAt: now(),
               };
@@ -865,6 +1226,14 @@ export default function Contacts({
                 <option value="Opted out">Opted out</option>
                 <option value="">Any</option>
                 <option>Yes</option>
+              </select>
+            </label>
+            <label>
+              Segment status
+              <select name="status" defaultValue={editSegment?.data.status || "Active"}>
+                <option value="Active">Active</option>
+                <option value="Draft">Draft</option>
+                <option value="Archived">Archived</option>
               </select>
             </label>
             <button className="primary">Save segment</button>

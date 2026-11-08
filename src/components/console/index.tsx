@@ -61,6 +61,7 @@ import Reports from "./reports";
 import Settings from "./settings";
 import WhatsAppBlueTick from "./whatsapp-blue-tick";
 import WhatsAppConfig from "./whatsapp-config";
+import MailConfig from "./mail-config";
 import OnboardingWizard from "./onboarding-wizard";
 import { Panel, Empty, Badge, date } from "./ui";
 import { groups, names } from "./navigation";
@@ -444,6 +445,8 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
         navigate={navigate}
       />
     );
+  else if (page === "email-setup" || page === "identities" || page === "senders")
+    content = <MailConfig account={account} notify={notify} />;
   else if (page === "tasks") content = <Tasks notify={notify} />;
   else if (
     [
@@ -453,7 +456,6 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
       "automation-handoffs",
       "sheets",
       "webhooks",
-      "email-setup",
       "email-sync",
       "availability",
       "reminders",
