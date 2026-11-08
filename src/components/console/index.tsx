@@ -62,6 +62,7 @@ import Settings from "./settings";
 import WhatsAppBlueTick from "./whatsapp-blue-tick";
 import WhatsAppConfig from "./whatsapp-config";
 import MailConfig from "./mail-config";
+import Profile from "./profile";
 import OnboardingWizard from "./onboarding-wizard";
 import { Panel, Empty, Badge, date } from "./ui";
 import { groups, names } from "./navigation";
@@ -448,6 +449,15 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
     );
   else if (page === "email-setup" || page === "identities" || page === "senders")
     content = <MailConfig account={account} notify={notify} />;
+  else if (page === "edit-profile" || page === "profile")
+    content = (
+      <Profile
+        userName={userName}
+        userEmail={userEmail}
+        notify={notify}
+        onNavigate={navigate}
+      />
+    );
   else if (page === "tasks") content = <Tasks notify={notify} />;
   else if (
     [
@@ -819,11 +829,11 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
 
         {/* User Account Card at Bottom of Sidebar */}
         <div
-          className="rapid-user-card"
-          onClick={() => setProfileMenuOpen((v) => !v)}
+          className={`rapid-user-card ${page === "edit-profile" ? "active" : ""}`}
+          onClick={() => navigate("edit-profile")}
           role="button"
           tabIndex={0}
-          title="Account menu"
+          title="Edit profile"
         >
           <div className="rapid-user-avatar">
             <span>{userInitials}</span>
@@ -998,13 +1008,25 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
                       <div className="rapid-profile-dropdown-divider" />
                     </>
                   )}
+                  <button
+                    type="button"
+                    className="rapid-dropdown-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      navigate("edit-profile");
+                    }}
+                  >
+                    <User size={15} />
+                    <span>Edit Profile</span>
+                  </button>
                   <a
                     href={account ? "/account/manage" : "/login"}
                     className="rapid-dropdown-item"
                     role="menuitem"
                   >
-                    <User size={15} />
-                    <span>Account Settings</span>
+                    <SettingsIcon size={15} />
+                    <span>Account Security</span>
                   </a>
                   <button
                     type="button"

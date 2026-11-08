@@ -155,6 +155,8 @@ export const groups = [
 ] satisfies { name: string; icon: typeof Users; items: string[][] }[];
 export const names: Record<string, string> = Object.fromEntries([
   ["overview", "Overview"],
+  ["edit-profile", "Account / Edit Profile"],
+  ["change-password", "Account / Change Password"],
   ...groups.flatMap((g) =>
     g.items.map(([id, title]) => [id, `${g.name} / ${title}`]),
   ),
