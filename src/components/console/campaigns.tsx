@@ -962,7 +962,7 @@ export default function Campaigns({
                       }).catch(() => {});
 
                       if (update((state) => runCampaign(state, current.id))) {
-                        notify(`🚀 Live Campaign Dispatched to ${eligible.length} recipients via Scalezix Managed Gateway!`);
+                        notify(`🚀 Live Campaign Dispatched to ${eligible.length} recipients via Leadpilot Managed Gateway!`);
                         setDetail("");
                       }
                     } catch (err) {

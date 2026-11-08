@@ -56,15 +56,15 @@ export default function WhatsAppBlueTick({
   const [submitting, setSubmitting] = useState(false);
 
   // Form states
-  const [businessName, setBusinessName] = useState(data.businessName || s.settings.name || "Scalezix Technologies Pvt Ltd");
+  const [businessName, setBusinessName] = useState(data.businessName || s.settings.name || "Leadpilot Technologies Pvt Ltd");
   const [regNumber, setRegNumber] = useState(data.registrationNumber || "U72900MH2023PTC123456");
-  const [displayName, setDisplayName] = useState(data.displayName || s.settings.name || "Scalezix");
-  const [websiteUrl, setWebsiteUrl] = useState(data.websiteUrl || "https://scalezix.com");
+  const [displayName, setDisplayName] = useState(data.displayName || s.settings.name || "Leadpilot");
+  const [websiteUrl, setWebsiteUrl] = useState(data.websiteUrl || "https://leadpilot.ai");
   const [wikipediaUrl, setWikipediaUrl] = useState(data.wikipediaUrl || "");
   const [crunchbaseUrl, setCrunchbaseUrl] = useState(data.crunchbaseUrl || "");
   const [justification, setJustification] = useState(
     data.justification ||
-      "Scalezix is a recognized omnichannel communication and AI outreach enterprise platform with over 50,000 active business conversations. Verification prevents brand impersonation and establishes authentic customer communications."
+      "Leadpilot is a recognized omnichannel communication and AI outreach enterprise platform with over 50,000 active business conversations. Verification prevents brand impersonation and establishes authentic customer communications."
   );
 
   // Readiness Checklist items
@@ -89,15 +89,15 @@ export default function WhatsAppBlueTick({
       {
         id: "1",
         publisher: "The Economic Times",
-        url: "https://economictimes.indiatimes.com/tech/scalezix-omnichannel-expansion",
-        title: "Scalezix automates business outreach across WhatsApp and conversational AI",
+        url: "https://economictimes.indiatimes.com/tech/leadpilot-omnichannel-expansion",
+        title: "Leadpilot automates business outreach across WhatsApp and conversational AI",
         date: "2026-08-14",
       },
       {
         id: "2",
         publisher: "TechCrunch",
-        url: "https://techcrunch.com/2026/05/20/scalezix-conversational-voice-and-messaging",
-        title: "Scalezix launches low-latency Indic speech agents for enterprise outreach",
+        url: "https://techcrunch.com/2026/05/20/leadpilot-conversational-voice-and-messaging",
+        title: "Leadpilot launches low-latency Indic speech agents for enterprise outreach",
         date: "2026-05-20",
       },
     ];
@@ -277,7 +277,7 @@ export default function WhatsAppBlueTick({
         })),
       },
       justificationStatement: justification,
-      domainOwnershipVerificationToken: `scalezix-oba-verify-${Buffer.from(displayName).toString("base64")}`,
+      domainOwnershipVerificationToken: `leadpilot-oba-verify-${Buffer.from(displayName).toString("base64")}`,
       readinessAuditScore: `${score}%`,
       submissionChecklist: {
         twoFactorAuthenticationActive: has2FA,

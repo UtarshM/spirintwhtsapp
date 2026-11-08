@@ -113,7 +113,7 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("scalezix_impersonating_tenant");
+      const raw = localStorage.getItem("leadpilot_impersonating_tenant");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed?.name) setImpersonatedTenant(parsed.name);
@@ -882,7 +882,7 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
                 cursor: "pointer",
               }}
               onClick={() => {
-                localStorage.removeItem("scalezix_impersonating_tenant");
+                localStorage.removeItem("leadpilot_impersonating_tenant");
                 setImpersonatedTenant(null);
                 window.location.href = "/admin";
               }}

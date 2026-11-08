@@ -83,14 +83,14 @@ export default function WhatsAppConfig({
   // Form states for Bot Automation
   const [botPurpose, setBotPurpose] = useState(botData.purpose || "Lead Generation");
   const [botTone, setBotTone] = useState(botData.tone || "Professional (Formal and precise responses)");
-  const [kbName, setKbName] = useState(botData.kbName || "Scalezix Customer Knowledge Base");
+  const [kbName, setKbName] = useState(botData.kbName || "Leadpilot Customer Knowledge Base");
   const [kbText, setKbText] = useState(
     botData.kbText ||
-      "Q: What is Scalezix?\nA: Scalezix is an omnichannel outreach automation platform combining WhatsApp, Email, and Indic AI Calling.\n\nQ: Do you offer free trial credits?\nA: Yes, new workspaces receive 500 complimentary testing credits.\n\nQ: How fast do AI voice calls start?\nA: AI calling synthesizes responses in under 120ms with human-like conversation latency."
+      "Q: What is Leadpilot?\nA: Leadpilot is an autonomous outreach platform combining WhatsApp, Email, and Indic AI Calling.\n\nQ: Do you offer free trial credits?\nA: Yes, new workspaces receive 500 complimentary testing credits.\n\nQ: How fast do AI voice calls start?\nA: AI calling synthesizes responses in under 120ms with human-like conversation latency."
   );
   const [description, setDescription] = useState(
     botData.description ||
-      "Scalezix is an enterprise AI sales platform specializing in automated multi-channel lead acquisition and qualification."
+      "Leadpilot is an autonomous B2B revenue and outreach platform specializing in automated multi-channel lead acquisition and qualification."
   );
   const [services, setServices] = useState(
     botData.services || "WhatsApp Automation, AI Voice Calling, Cold Email Infrastructure, Verified Blue Tick Assistance"
@@ -103,7 +103,7 @@ export default function WhatsAppConfig({
   );
   const [greeting, setGreeting] = useState(
     botData.greeting ||
-      "Hello! Welcome to Scalezix. I'm your AI sales assistant. How can I help boost your outreach pipeline today?"
+      "Hello! Welcome to Leadpilot. I'm your AI sales assistant. How can I help boost your outreach pipeline today?"
   );
   const [instructions, setInstructions] = useState(
     botData.instructions ||
@@ -177,7 +177,7 @@ export default function WhatsAppConfig({
             messageDelay: String(messageDelay),
             qualityRating: "High (Green)",
             tier: "Tier 2 (10k / day)",
-            verifiedName: s.settings.name || "Scalezix",
+            verifiedName: s.settings.name || "Leadpilot",
           },
           updatedAt: now(),
         },
@@ -338,7 +338,7 @@ export default function WhatsAppConfig({
                 }}
               >
                 {gatewayMode === "managed"
-                  ? "SCALEZIX MANAGED POOL"
+                  ? "LEADPILOT MANAGED POOL"
                   : "DEDICATED BYOK"}
               </span>
             </div>
@@ -346,7 +346,7 @@ export default function WhatsAppConfig({
               <div
                 onClick={() => {
                   setGatewayMode("managed");
-                  notify("Switched to Scalezix Managed High-Throughput Gateway");
+                  notify("Switched to Leadpilot Managed High-Throughput Gateway");
                 }}
                 style={{
                   padding: 14,
@@ -371,7 +371,7 @@ export default function WhatsAppConfig({
                   }}
                 >
                   <Zap size={15} style={{ color: "#059669" }} />
-                  <span>Scalezix Managed Gateway (Default)</span>
+                  <span>Leadpilot Managed Gateway (Default)</span>
                 </div>
                 <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.4 }}>
                   Pre-verified Meta Cloud API pool. Zero Facebook Business verification delay. Dispatches instantly using wallet credits (₹1.00/msg).
@@ -463,7 +463,7 @@ export default function WhatsAppConfig({
                   </div>
                   <div>
                     <strong style={{ fontSize: 16, color: "#0f172a" }}>
-                      {metaData.verifiedName || s.settings.name || "Scalezix"}
+                      {metaData.verifiedName || s.settings.name || "Leadpilot"}
                     </strong>
                     <div style={{ fontSize: 13, color: "#059669", fontWeight: 600 }}>{phoneNumber}</div>
                   </div>

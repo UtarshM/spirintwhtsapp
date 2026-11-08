@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         channel,
         dispatchedCount: recipientCount,
         costCredits: totalCredits,
-        gateway: gatewayMode === "byok" ? "Enterprise Dedicated Gateway (BYOK)" : "Scalezix Managed High-Throughput Gateway",
+        gateway: gatewayMode === "byok" ? "Enterprise Dedicated Gateway (BYOK)" : "Leadpilot Managed High-Throughput Gateway",
         timestamp: new Date().toISOString(),
       });
     }
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       channel,
       dispatchedCount: recipientCount,
       costCredits: totalCredits,
-      gateway: gatewayMode === "byok" ? "Enterprise Dedicated Gateway (BYOK)" : "Scalezix Managed High-Throughput Gateway",
+      gateway: gatewayMode === "byok" ? "Enterprise Dedicated Gateway (BYOK)" : "Leadpilot Managed High-Throughput Gateway",
       timestamp: new Date().toISOString(),
     });
   } catch (err) {

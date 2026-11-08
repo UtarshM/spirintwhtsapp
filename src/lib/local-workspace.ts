@@ -14,7 +14,7 @@ export const localContactSchema = z.object({
   tags: z.array(short).max(30),
   consent: z.boolean(),
   optedOut: z.boolean().default(false),
-  owner: short.default("Scalezix team"),
+  owner: short.default("Leadpilot team"),
   notes: z.string().max(10000).default(""),
   value: z.number().nonnegative().default(0),
   createdAt: timestamp.default(""),
@@ -308,7 +308,7 @@ export function createLocalWorkspace(): LocalWorkspace {
     contacts: initialContacts.map((c) => ({
       ...c,
       optedOut: false,
-      owner: "Scalezix team",
+      owner: "Leadpilot team",
       notes: "",
       value: 0,
       createdAt: at,
@@ -331,7 +331,7 @@ export function createLocalWorkspace(): LocalWorkspace {
         name: "Keep the conversation going",
         channel: "Email",
         subject: "A quick follow-up, {{first_name}}",
-        body: "Hi {{first_name}},\n\nThanks for your time. Would you like to explore how we can help {{company}}?\n\nBest,\nThe Scalezix team",
+        body: "Hi {{first_name}},\n\nThanks for your time. Would you like to explore how we can help {{company}}?\n\nBest,\nThe Leadpilot team",
         status: "Ready",
         category: "Marketing",
         mediaUrl: "",
@@ -408,7 +408,7 @@ export function createLocalWorkspace(): LocalWorkspace {
         instructions:
           "Greet the prospect, qualify team size and monthly outreach volume, answer pricing queries, and offer to schedule a live walkthrough with our sales engineers.",
         knowledge:
-          "Sprint by Scalezix unifies WhatsApp, email, and AI voice calls for Indian businesses starting at ₹3,000/month. We support official WhatsApp Cloud API, BYO-Plivo telephony, and Sarvam multilingual AI.",
+          "Leadpilot unifies WhatsApp, email, and AI voice calls for high-growth businesses starting at ₹3,000/month. We support official WhatsApp Cloud API, BYO-Plivo telephony, and Sarvam multilingual AI.",
         qualification:
           "1. What is your monthly lead volume? 2. Which outreach channels do you currently prioritize?",
         maxDuration: 300,
@@ -423,7 +423,7 @@ export function createLocalWorkspace(): LocalWorkspace {
         id: "thread-1",
         contactId: "1",
         channel: "WhatsApp",
-        assignee: "Scalezix team",
+        assignee: "Leadpilot team",
         status: "Open",
         draft: "",
       },
@@ -431,7 +431,7 @@ export function createLocalWorkspace(): LocalWorkspace {
         id: "thread-2",
         contactId: "2",
         channel: "Email",
-        assignee: "Scalezix team",
+        assignee: "Leadpilot team",
         status: "Open",
         draft: "",
       },
@@ -470,7 +470,7 @@ export function createLocalWorkspace(): LocalWorkspace {
     team: [
       {
         id: "owner",
-        name: "Scalezix team",
+        name: "Leadpilot team",
         email: "team@example.com",
         role: "Owner",
         status: "Active",
@@ -667,7 +667,7 @@ export function simulateCampaign(
           id: uid(),
           contactId: contact.id,
           channel: c.channel,
-          assignee: "Scalezix team",
+          assignee: "Leadpilot team",
           status: "Open",
           draft: "",
           ...(c.channel === "Email"

@@ -156,7 +156,7 @@ export default function OnboardingWizard({
           </div>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 6px 0", letterSpacing: "-0.4px" }}>
-            Tailor Your Scalezix Outreach Machine
+            Tailor Your Leadpilot Outreach Machine
           </h2>
           <p style={{ fontSize: 13, color: "#c7d2fe", margin: 0 }}>
             Choose your industry to automatically load pre-approved WhatsApp templates, AI voice scripts, and 500 free outreach credits.

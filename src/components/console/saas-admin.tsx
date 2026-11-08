@@ -649,7 +649,7 @@ export default function SaaSAdmin({
                           style={{ padding: "4px 10px", fontSize: 12 }}
                           onClick={() => {
                             if (typeof window !== "undefined") {
-                              localStorage.setItem("scalezix_impersonating_tenant", JSON.stringify(t));
+                              localStorage.setItem("leadpilot_impersonating_tenant", JSON.stringify(t));
                             }
                             notify(`Switched context to ${t.name}'s workspace`);
                             window.location.href = "/dashboard#overview";

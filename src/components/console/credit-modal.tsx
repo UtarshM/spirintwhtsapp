@@ -75,7 +75,7 @@ export default function CreditModal({
             key: orderData.keyId,
             amount: orderData.totalPaise,
             currency: orderData.currency || "INR",
-            name: "Scalezix Cloud",
+            name: "Leadpilot Cloud",
             description: `${orderData.invoiceNumber} · Credits Top-Up`,
             order_id: orderData.orderId,
             handler: function (response: { razorpay_payment_id?: string }) {
@@ -94,10 +94,10 @@ export default function CreditModal({
               onClose();
             },
             prefill: {
-              name: s.settings?.name || "Scalezix Customer",
+              name: s.settings?.name || "Leadpilot Customer",
               email: "um18218@gmail.com",
             },
-            theme: { color: "#4f46e5" },
+            theme: { color: "#2563eb" },
           });
           rzp.open();
           setLoading(false);
