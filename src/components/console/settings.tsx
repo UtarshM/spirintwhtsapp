@@ -21,6 +21,7 @@ export default function Settings({
 }) {
   const { state: s, update, replace, storage } = useWorkspace();
   const [channel, setChannel] = useState<Channel>("WhatsApp"),
+    [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly"),
     [reset, setReset] = useState(false),
     [importData, setImportData] = useState<ReturnType<
       typeof validateBackup
@@ -93,115 +94,215 @@ export default function Settings({
             </div>
           </div>
 
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "24px 0 6px" }}>
-            Choose Your Plan
-          </h3>
-          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 16px" }}>
-            Plan price is the platform fee only. WhatsApp, email and AI voice calling usage are charged from your shared credits.
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", margin: "24px 0 16px" }}>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>
+                Choose Your Plan
+              </h3>
+              <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+                Plan price is the platform fee only. WhatsApp, email and AI voice calling usage are charged from your shared credits.
+              </p>
+            </div>
 
-          <div className="console-card-grid" style={{ marginBottom: 24 }}>
+            {/* Annual / Monthly Toggle */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                background: "#f1f5f9",
+                padding: "3px",
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setBillingCycle("monthly")}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: 6,
+                  border: "none",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: billingCycle === "monthly" ? "#ffffff" : "transparent",
+                  color: billingCycle === "monthly" ? "#0f172a" : "#64748b",
+                  boxShadow: billingCycle === "monthly" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                }}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle("annual")}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: 6,
+                  border: "none",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: billingCycle === "annual" ? "#ffffff" : "transparent",
+                  color: billingCycle === "annual" ? "#2563eb" : "#64748b",
+                  boxShadow: billingCycle === "annual" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                Annual <span style={{ fontSize: 10, background: "#dbeafe", color: "#1d4ed8", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>SAVE 29%</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="console-card-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", marginBottom: 24 }}>
             {[
               {
                 name: "Basic",
-                price: 3000,
+                monthlyPrice: 3000,
+                annualPrice: 2125,
                 credits: 100,
-                desc: "Best for getting started with multi-channel outreach",
+                desc: "For startups beginning multi-channel sales outreach.",
                 popular: false,
                 features: [
-                  "100 Shared Credits included",
+                  "Includes 100 Shared Credits",
                   "2 AI Calling languages & 4 voices",
                   "2 Email accounts connection",
-                  "WhatsApp Broadcasts & Webhooks",
+                  "Basic outreach sequences",
                   "Unlimited audience segments",
-                  "Single user workspace",
+                  "Standard support",
                 ],
               },
               {
                 name: "Advance",
-                price: 6000,
+                monthlyPrice: 6000,
+                annualPrice: 4250,
                 credits: 250,
-                desc: "Perfect for high-growth businesses and scaling teams",
+                desc: "For growing sales teams running higher outreach volumes.",
                 popular: true,
                 features: [
-                  "250 Shared Credits included",
+                  "Includes 250 Shared Credits",
                   "4 AI Calling languages & 8 voices",
+                  "AI WhatsApp Auto-Reply",
                   "5 Email accounts connection",
-                  "AI WhatsApp Auto-Reply & Knowledge Base",
+                  "1,000 Call Recording minutes",
                   "Shopify & Razorpay automated drips",
-                  "Multi-seat team assignment",
+                  "AI Content Creators",
                 ],
               },
               {
                 name: "Pro",
-                price: 12000,
+                monthlyPrice: 12000,
+                annualPrice: 8500,
                 credits: 500,
-                desc: "High volume enterprise autonomous outreach machine",
+                desc: "For large-scale outbound campaigns and larger teams.",
                 popular: false,
                 features: [
-                  "500 Shared Credits included",
+                  "Includes 500 Shared Credits",
                   "10 AI Calling languages & 20 voices",
                   "10 Email accounts connection",
                   "3,000 Call Recording minutes",
-                  "WhatsApp Official Blue Tick (OBA) filing",
-                  "Dedicated priority routing gateway",
+                  "Official WhatsApp Blue Tick (OBA) filing",
+                  "Priority support & dedicated routing",
                 ],
               },
-            ].map((plan) => (
-              <article
-                className="console-mini-card"
-                key={plan.name}
-                style={{
-                  border: plan.popular ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                  background: plan.popular ? "#ffffff" : "#ffffff",
-                  position: "relative",
-                  boxShadow: plan.popular ? "0 4px 14px rgba(37,99,235,0.08)" : undefined,
-                }}
-              >
-                {plan.popular && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: -10,
-                      right: 14,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "2px 8px",
-                      borderRadius: 10,
-                      background: "#2563eb",
-                      color: "#fff",
-                    }}
-                  >
-                    🔥 POPULAR
-                  </span>
-                )}
-                <h3 style={{ margin: "0 0 4px" }}>{plan.name}</h3>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "6px 0 2px" }}>
-                  ₹{plan.price.toLocaleString("en-IN")}<span style={{ fontSize: 13, fontWeight: 500, color: "#64748b" }}>/mo + GST</span>
-                </div>
-                <p style={{ fontSize: 12, color: "#475569", margin: "0 0 14px", lineHeight: 1.4 }}>
-                  {plan.desc}
-                </p>
-                <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 10, marginBottom: 14 }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "#334155" }}>
-                    {plan.features.map((feat) => (
-                      <div key={feat} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ color: "#2563eb", fontWeight: 700 }}>✓</span>
-                        <span>{feat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className={plan.popular ? "primary" : "secondary"}
-                  style={{ width: "100%", background: plan.popular ? "#2563eb" : undefined, color: plan.popular ? "#fff" : undefined }}
-                  onClick={() => notify(`Selected ${plan.name} plan`)}
+              {
+                name: "WhatsApp Only Advance",
+                monthlyPrice: 1999,
+                annualPrice: 1499,
+                credits: 0,
+                desc: "For teams that want structured WhatsApp outreach and follow-ups.",
+                popular: false,
+                badge: "WHATSAPP ONLY",
+                features: [
+                  "250/day (Meta Tier Based)",
+                  "Abandoned Cart Notifications",
+                  "Basic Sequences",
+                  "Meta & Google Leads Integration",
+                  "Shopify Integration",
+                  "AI Content Creators",
+                ],
+              },
+            ].map((plan) => {
+              const activePrice = billingCycle === "annual" ? plan.annualPrice : plan.monthlyPrice;
+              return (
+                <article
+                  className="console-mini-card"
+                  key={plan.name}
+                  style={{
+                    border: plan.popular ? "2px solid #2563eb" : "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    position: "relative",
+                    boxShadow: plan.popular ? "0 4px 14px rgba(37,99,235,0.08)" : undefined,
+                  }}
                 >
-                  {plan.popular ? "Current Plan" : "Select Plan"}
-                </button>
-              </article>
-            ))}
+                  {plan.popular ? (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: -10,
+                        right: 14,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 10,
+                        background: "#2563eb",
+                        color: "#fff",
+                      }}
+                    >
+                      🔥 POPULAR
+                    </span>
+                  ) : plan.badge ? (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: -10,
+                        right: 14,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 10,
+                        background: "#059669",
+                        color: "#fff",
+                      }}
+                    >
+                      {plan.badge}
+                    </span>
+                  ) : null}
+                  <h3 style={{ margin: "0 0 4px", fontSize: 16 }}>{plan.name}</h3>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "6px 0 2px" }}>
+                    ₹{activePrice.toLocaleString("en-IN")}
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>/mo + GST</span>
+                  </div>
+                  {billingCycle === "annual" && (
+                    <div style={{ fontSize: 11, color: "#059669", fontWeight: 600, marginBottom: 4 }}>
+                      Billed annually (Save 29%)
+                    </div>
+                  )}
+                  <p style={{ fontSize: 12, color: "#475569", margin: "0 0 14px", lineHeight: 1.4, minHeight: 34 }}>
+                    {plan.desc}
+                  </p>
+                  <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 10, marginBottom: 14 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: "#334155" }}>
+                      {plan.features.map((feat) => (
+                        <div key={feat} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                          <span style={{ color: "#2563eb", fontWeight: 700 }}>✓</span>
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={plan.popular ? "primary" : "secondary"}
+                    style={{ width: "100%", background: plan.popular ? "#2563eb" : undefined, color: plan.popular ? "#fff" : undefined }}
+                    onClick={() => notify(`Selected ${plan.name} plan`)}
+                  >
+                    {plan.popular ? "Current Plan" : "Get Started"}
+                  </button>
+                </article>
+              );
+            })}
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
