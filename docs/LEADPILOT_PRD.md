@@ -6,9 +6,9 @@
 ## Document Control
 * **Product Name**: Leadpilot
 * **Reference Benchmark**: RapidSales AI (`https://app.rapidsales.ai/`)
-* **Version**: 2.1.0 (Production Master Specification)
+* **Version**: 2.2.0 (Complete Architectural & Technical Specification)
 * **Author**: Leadpilot Product & Engineering Team
-* **Status**: Complete, Verified & Synced
+* **Status**: Complete, Verified & Production-Ready
 
 ---
 
@@ -17,28 +17,18 @@
 2. [Target Audience & Ideal Customer Profile (ICP)](#2-target-audience--ideal-customer-profile-icp)
 3. [System Architecture & Technology Stack](#3-system-architecture--technology-stack)
 4. [Functional Modules Specification (13 Core Modules)](#4-functional-modules-specification-13-core-modules)
-   * [Module 1: Authentication, Onboarding & Multi-Tenancy](#module-1-authentication-onboarding--multi-tenancy)
-   * [Module 2: Executive Dashboard & Real-Time Telemetry](#module-2-executive-dashboard--real-time-telemetry)
-   * [Module 3: Audience Hub (Contacts & Lifecycle Segments)](#module-3-audience-hub-contacts--lifecycle-segments)
-   * [Module 4: Campaigns Engine & Multi-Channel Sequence Builder](#module-4-campaigns-engine--multi-channel-sequence-builder)
-   * [Module 5: WhatsApp Cloud API Suite](#module-5-whatsapp-cloud-api-suite)
-   * [Module 6: WhatsApp Official Blue Tick (OBA) Verification Hub](#module-6-whatsapp-official-blue-tick-oba-verification-hub)
-   * [Module 7: AI Voice Calling Suite (11 Indian Languages)](#module-7-ai-voice-calling-suite-11-indian-languages)
-   * [Module 8: Cold Email Infrastructure Suite](#module-8-cold-email-infrastructure-suite)
-   * [Module 9: Qualified Leads CRM Hub](#module-9-qualified-leads-crm-hub)
-   * [Module 10: Automation Reports & Channel Analytics](#module-10-automation-reports--channel-analytics)
-   * [Module 11: Working Hours & Compliance Governance](#module-11-working-hours--compliance-governance)
-   * [Module 12: Billing, Subscriptions & Universal Credit Wallet](#module-12-billing-subscriptions--universal-credit-wallet)
-   * [Module 13: Profile, Security & Organization Management](#module-13-profile-security--organization-management)
-5. [Third-Party APIs & Environment Variables Master Directory](#5-third-party-apis--environment-variables-master-directory)
-6. [Database Schema & Data Models (PostgreSQL / Supabase)](#6-database-schema--data-models-postgresql--supabase)
-7. [Inbound E-Commerce & Lead Ads Webhook Integrations](#7-inbound-e-commerce--lead-ads-webhook-integrations)
-8. [AI Content Creators & Prompt Engineering Engine](#8-ai-content-creators--prompt-engineering-engine)
-9. [Production Webhook Event Payloads & Schemas](#9-production-webhook-event-payloads--schemas)
-10. [Unit Economics, Pricing & Margin Analysis](#10-unit-economics-pricing--margin-analysis)
-11. [Regulatory Compliance & Security Architecture](#11-regulatory-compliance--security-architecture)
-12. [Step-by-Step Provider Setup Guides](#12-step-by-step-provider-setup-guides)
-13. [Production Deployment & Launch Checklist](#13-production-deployment--launch-checklist)
+5. [The Credit System: Architecture, Mechanics & Ledger Engine](#5-the-credit-system-architecture-mechanics--ledger-engine)
+6. [Complete REST API Catalog & Route Handlers](#6-complete-rest-api-catalog--route-handlers)
+7. [Core Application Functions & Algorithms (TypeScript Engine)](#7-core-application-functions--algorithms-typescript-engine)
+8. [Third-Party APIs & Environment Variables Master Directory](#8-third-party-apis--environment-variables-master-directory)
+9. [Database Schema & Data Models (PostgreSQL / Supabase)](#9-database-schema--data-models-postgresql--supabase)
+10. [Inbound E-Commerce & Lead Ads Webhook Integrations](#10-inbound-e-commerce--lead-ads-webhook-integrations)
+11. [AI Content Creators & Prompt Engineering Engine](#11-ai-content-creators--prompt-engineering-engine)
+12. [Production Webhook Event Payloads & Schemas](#12-production-webhook-event-payloads--schemas)
+13. [Unit Economics, Pricing & Margin Analysis](#13-unit-economics-pricing--margin-analysis)
+14. [Regulatory Compliance & Security Architecture](#14-regulatory-compliance--security-architecture)
+15. [Step-by-Step Provider Setup Guides](#15-step-by-step-provider-setup-guides)
+16. [Production Deployment & Launch Checklist](#16-production-deployment--launch-checklist)
 
 ---
 
@@ -75,6 +65,7 @@ flowchart TD
         Auth["Supabase Auth (JWT + Session)"]
         DB[(Supabase PostgreSQL\nMulti-Tenant RLS)]
         KMS["AWS KMS\n(Envelope Encryption AES-256-GCM)"]
+        Wallet["Universal Credit Wallet\n(Two-Phase Reservation Engine)"]
     end
 
     subgraph ProviderLayer ["External Provider Integration Layer"]
@@ -89,17 +80,14 @@ flowchart TD
     API --> Auth
     API --> DB
     API --> KMS
+    API --> Wallet
+    Wallet --> DB
     API --> META
     API --> VOICE
     API --> EMAIL
     API --> PAY
     API --> AI
 ```
-
-* **Frontend**: Next.js 16.4 (Turbopack), React 19, TypeScript (Strict), Lucide Icons, Custom Royal Blue Design System (`#2563eb`, `#0f172a`, `#38bdf8`).
-* **Backend & Database**: Supabase PostgreSQL with Row Level Security (RLS), Edge Middleware for multi-tenant tenant isolation.
-* **Encryption**: AWS KMS Envelope Encryption (`AES-256-GCM`) for storing third-party API tokens (Meta permanent tokens, SMTP passwords, Plivo auth secrets).
-* **AI Orchestration**: AWS Bedrock (Anthropic Claude 3.5 Haiku) for sub-second copy generation, inbound WhatsApp bot replies, and call summarization.
 
 ---
 
@@ -115,114 +103,271 @@ flowchart TD
 
 ### Module 2: Executive Dashboard & Real-Time Telemetry
 * **Metrics Grid**: Wallet balance (Credits), Total spend (₹), Total contacts, Reply rate (%).
-* **Channel Performance Cards**:
-  * **Email**: Sent, Delivered, Opened, Replied, Bounced, Spam complaints, Cost.
-  * **WhatsApp**: Sent, Delivered, Read, Replied, Failed, Cost, Auto-replies ledger.
-  * **AI Calling**: Total calls, Completed, Failed, Average duration, Cost.
+* **Channel Performance Cards**: Email, WhatsApp, AI Calling stats (sent, delivered, read, replied, bounced, duration, cost).
 * **Time Filters**: All, Today, Yesterday, This Week, Last Week, This Month, Last Month, This Year, Custom Date Range.
 * **Quick Actions**: New Campaign, Import Contacts, Email Inbox, WhatsApp Inbox, Lead List.
 
 ### Module 3: Audience Hub (Contacts & Lifecycle Segments)
-* **Contacts Table**: Search by name/phone/email, multi-tag filtering, consent status (`Verified`, `Pending`, `Opt-Out`).
-* **Country-Scoped Importer**:
-  * Bulk CSV upload with visual column mapping (Name, Phone, Email, Company, Tags).
-  * Auto-prepend country code selector (Default `+91 India`, UAE `+971`, US `+1`, UK `+44`).
-  * Deduplication engine against existing database phone numbers and emails.
-  * 1-click Download Sample CSV template.
-* **Dynamic Segments**:
-  * Filter criteria builder (Tag matches, channel consent, engagement status).
-  * Status Lifecycle: `Active`, `Draft`, `Archived`.
-  * Status filter bar (`All`, `Active`, `Draft`, `Archived`).
-  * 1-click Archive/Unarchive actions directly on cards.
+* **Contacts Table**: Search, multi-tag filtering, consent status (`Verified`, `Pending`, `Opt-Out`).
+* **Country-Scoped Importer**: Bulk CSV upload with visual column mapping, auto-prepend country code (`+91 India`, etc.), deduplication engine, and sample CSV download.
+* **Dynamic Segments**: Filter rules builder with status lifecycle (`Active`, `Draft`, `Archived`), filter tabs, and 1-click status toggles.
 
 ### Module 4: Campaigns Engine & Multi-Channel Sequence Builder
-* **Campaigns Table**: Filter by channel, status (`Active`, `Draft`, `Completed`, `Paused`), priority (`High`, `Normal`, `Low`).
-* **Prerequisite Guard Modal**: Clicking *"New Campaign"* when sequences are empty triggers the exact RapidSales guard:
+* **Campaigns Table**: Filter by channel, status (`Active`, `Draft`, `Completed`, `Paused`), priority.
+* **Prerequisite Guard Modal**: Clicking *"New Campaign"* when sequences are empty triggers:
   * Title: *"Create a sequence first"*
-  * Body: *"You don't have any sequences yet. A campaign needs a sequence to run against — build one in the Sequence Builder and then come back here to launch your campaign."*
-  * Actions: *"Cancel"* & *"Create Sequence"* (redirects directly to `/sequences`).
-* **Drag-and-Drop Sequence Builder**:
-  * Action nodes: WhatsApp Message, AI Voice Call, Cold Email.
-  * Logic nodes: Delay (Minutes, Hours, Days), If Replied Condition, If Call Answered Condition.
-  * Handoff triggers: Auto-create follow-up task on human reply.
+  * Body: *"You don't have any sequences yet. A campaign needs a sequence to run against..."*
+  * Actions: *"Cancel"* & *"Create Sequence"* (redirects to `/sequences`).
+* **Drag-and-Drop Sequence Builder**: Action nodes (WhatsApp, Call, Email), logic nodes (Delays, If Replied, If Answered), and human takeover triggers.
 
 ### Module 5: WhatsApp Cloud API Suite
 * **Dual Connection Onboarding Model**:
-  1. **Direct Mode (Meta Embedded Signup)**:
-     * 5-step animated modal simulating the Meta Login dialog:
-       * Step 1: Meta window login / business verify
-       * Step 2: Permanent token exchange
-       * Step 3: Webhook subscription
-       * Step 4: Finding number & WABA
-       * Step 5: Activating number & 6-digit PIN
-  2. **Manual Mode (BYOK)**:
-     * Configuration modal with Phone Number, Delay, Phone ID, WABA ID, Meta App ID, Meta App Secret, Permanent Access Token, Webhook URL, Verify Token, and live *"Test Connection"* ping against `/api/integrations/test`.
-* **Connected Phone Card**: Shows Mode (`DIRECT EMBEDDED` or `MANUAL BYOK`), Quality Rating (`High (Green)`), Daily Limit (`Tier 2 - 10k/day`), Webhook status (`Active`), and *"Apply for Blue Tick"* navigation.
-* **Live 2-Way Inbox**: Threaded customer conversations, HSM template sender, canned replies, human takeover toggle.
-* **AI Bot Flow Builder**: Trigger keywords, condition matching, Knowledge Base semantic search fallback.
+  1. **Direct Mode (Meta Embedded Signup)**: 5-step animated modal simulating Meta Login dialog (Login $\rightarrow$ Token Exchange $\rightarrow$ Webhook $\rightarrow$ WABA ID $\rightarrow$ PIN Activation).
+  2. **Manual Mode (BYOK)**: Configuration modal with Phone ID, WABA ID, App ID, App Secret, Token, Webhook URL, and live *"Test Connection"* ping.
+* **Connected Phone Card**: Mode badge, Quality Rating (`High`), Daily Limit (`Tier 2 - 10k/day`), Webhook status (`Active`), Blue Tick navigation.
+* **Live 2-Way Inbox**: Threaded conversations, HSM template selector, canned replies, human takeover toggle.
+* **AI Bot Flow Builder**: Triggers, conditions, Knowledge Base semantic fallback.
 
 ### Module 6: WhatsApp Official Blue Tick (OBA) Verification Hub
-* **0–100% Readiness Audit Score**:
-  * Criterion 1: Meta Business Manager Verified (30%)
-  * Criterion 2: 2-Step Verification PIN Active (15%)
-  * Criterion 3: Official Business Website with matching domain & email (20%)
-  * Criterion 4: Brand Notability & Press Articles (35%)
-* **Dossier Submission Wizard**:
-  * Meta Business Manager ID, Registered Legal Entity Name & Trade License / Incorporation Certificate, Brand Wikipedia URL, up to 5 Top-Tier PR & Press Article Links.
+* **0–100% Readiness Audit Score**: Evaluates Meta Business Verification (30%), 2-Step PIN (15%), Official Website (20%), and Press Notability (35%).
+* **Dossier Submission Wizard**: Business Manager ID, Trade License / Incorporation, Wikipedia link, and up to 5 Top-Tier PR article links.
 
 ### Module 7: AI Voice Calling Suite (11 Indian Languages)
-* **Voice Dashboard**: Completed calls, failed calls, average duration, sentiment distribution, cost counter.
-* **Call Center**: Live browser dialer, microphone testing, live audio stream visualizer.
-* **Agent Builder**:
-  * 3 Operational Modes: *Conversational*, *Scripted*, and *IVR Menu*.
-  * Pronunciation Dictionary: Custom phonetic overrides for Indian brand names.
-  * Knowledge Base Upload: PDF/DOCX indexing for answering questions during live calls.
-  * Indian Languages: English (Indian), Hindi, Hinglish, Gujarati, Tamil, Telugu, Marathi, Kannada, Bengali, Malayalam, Punjabi.
-* **Visual IVR Phone Menu Builder**: DTMF Keypad Tree Builder (COD confirmation, order status, human rep transfer) with built-in keypad simulator.
+* **Voice Dashboard**: Completed calls, failed calls, average duration, sentiment breakdown, cost meter.
+* **Call Center**: Live browser dialer, microphone testing, audio visualizer.
+* **Agent Builder**: 3 Modes (*Conversational*, *Scripted*, *IVR Menu*), Pronunciation Dictionary, Knowledge Base upload, 11 Indian languages.
+* **Visual IVR Builder**: DTMF Keypad Tree Builder (COD confirmation, order status, human rep transfer) with keypad simulator.
 
 ### Module 8: Cold Email Infrastructure Suite
-* **Mail Setup Tab**:
-  * *Gmail*: 1-click Google OAuth 2.0 authorization with daily limit (250/day) & delay throttle (30s) controls.
-  * *Zoho Mail*: Exact 2-step setup modal with link to Zoho API Console, App Password generation instructions, and IMAP enablement guide.
-  * *Custom SMTP / IMAP*: Host, port, username, password with live TLS 1.3 handshake ping.
-  * *Connected Mailboxes Table*: Deliverability health badges (**SPF ✓, DKIM ✓, DMARC ✓**).
-* **Sender Identities Tab**:
-  * Cryptographic DNS TXT record generator with 1-click copy buttons for SPF, DKIM (RSA 2048-bit), DMARC, and MX.
+* **Mail Setup Tab**: Gmail 1-click OAuth, Zoho Mail 2-step setup, Custom SMTP/IMAP TLS 1.3 handshake, SPF/DKIM/DMARC deliverability badges.
+* **Sender Identities Tab**: Cryptographic DNS TXT record generator (SPF, DKIM RSA 2048-bit, DMARC, MX) with 1-click copy buttons.
 
 ### Module 9: Qualified Leads CRM Hub
-* **Auto-Assign**: Round-robin distribution across active sales reps with daily caps, routing strategies, and instant WhatsApp rep alerts.
-* **Custom Outcomes**: Dynamic qualification tag builder (e.g., `COD Confirmed`, `High Intent (₹50k+)`, `Schedule Field Visit`).
-* **Buckets (Kanban)**: 4-column drag-and-drop pipeline: `New Qualified` $\rightarrow$ `AI Contacted` $\rightarrow$ `Demo / Proposal` $\rightarrow$ `Closed Won`.
-* **Alerts & Webhooks**: Instant WhatsApp rep alerts + real-time JSON webhooks for Slack, Discord, and CRMs.
-* **Manual Leads**: Quick modal to insert qualified prospects directly into the CRM.
+* **Auto-Assign**: Round-robin distribution across active reps with daily caps, routing strategies, and instant WhatsApp rep alerts.
+* **Custom Outcomes**: Dynamic qualification tags (`COD Confirmed`, `High Intent (₹50k+)`, etc.).
+* **Buckets (Kanban)**: 4-column drag-and-drop pipeline (`New Qualified` $\rightarrow$ `AI Contacted` $\rightarrow$ `Demo / Proposal` $\rightarrow$ `Closed Won`).
+* **Alerts & Webhooks**: Instant WhatsApp rep alerts + real-time JSON webhooks for Slack, Discord, CRMs.
 
 ### Module 10: Automation Reports & Channel Analytics
-* **E-Commerce Reports**: Abandoned Cart Recovery Rate (%), COD Confirmation Rate (%), Dispatch Tracking Opens (%).
-* **Analytics**: Message volume graphs, per-channel conversion comparisons, acquisition costs.
+* Abandoned Cart Recovery Rate (%), COD Confirmation Rate (%), Dispatch Tracking Opens (%), unit acquisition cost.
 
 ### Module 11: Working Hours & Compliance Governance
-* **Working Days Schedule**: 7-day granular schedule with start/end times, per-channel enforcement, Saturday/Sunday skip, and timezone hold engine.
-* **API Keys Management**: Generate, rotate, and revoke REST API keys for headless API access.
+* 7-day granular schedule with Saturday/Sunday skip, TRAI 09:30 AM–07:00 PM IST enforcement, API keys management.
 
 ### Module 12: Billing, Subscriptions & Universal Credit Wallet
-* **Monthly Subscription Tiers**:
-  * **Basic**: ₹3,000/mo (Annual: ₹2,125/mo — Save 29%) · 100 Shared Credits · 2 Languages, 4 Voices · 2 Email accounts.
-  * **Advance (🔥 POPULAR)**: ₹6,000/mo (Annual: ₹4,250/mo — Save 29%) · 250 Shared Credits · 4 Languages, 8 Voices · 5 Email accounts · AI WhatsApp Auto-Reply.
-  * **Pro**: ₹12,000/mo (Annual: ₹8,500/mo — Save 29%) · 500 Shared Credits · 10 Languages, 20 Voices · 10 Email accounts · 3,000 Call Recording mins · Blue Tick filing.
-  * **WhatsApp Only Advance**: ₹1,999/mo (Annual: ₹1,499/mo) · 250/day (Meta Tier Based) · Abandoned Cart notifications · Shopify & Meta/Google leads webhooks.
-* **Credit Usage Estimator Modal**:
-  * Presets: Starter (₹400), Growth (₹2,000), Pro (₹7,800), Scale (₹30,800).
-  * Dynamic formula input: `emails * 0.09 + callMinutes * 3.10`.
-* **Universal Shared Wallet Engine**: `1 Credit = ₹1 INR`. Auto-pause guard preventing negative balances.
+* Plans: Basic (₹3,000/mo), Advance (₹6,000/mo), Pro (₹12,000/mo), WhatsApp Only (₹1,999/mo), 29% Annual discount.
+* Interactive Credit Estimator Modal: Starter (₹400), Growth (₹2,000), Pro (₹7,800), Scale (₹30,800) + dynamic usage calculator.
 
 ### Module 13: Profile, Security & Organization Management
-* Personal Details (First Name, Last Name), Contact Details (Email, Phone `+91 8200010241`).
-* Change Password modal with visibility eye toggles.
-* Organization & Multi-Workspace Switcher.
+* Edit Profile (`/edit-profile`), Change Password modal with visibility eye toggles, Organization Switcher.
 
 ---
 
-## 5. Third-Party APIs & Environment Variables Master Directory
+## 5. The Credit System: Architecture, Mechanics & Ledger Engine
+
+Leadpilot operates on a **Universal Shared Wallet** where **`1 Credit = ₹1 INR`**. All three channels draw from one single balance.
+
+```
+                               ┌─────────────────────────────────┐
+                               │     UNIVERSAL CREDIT WALLET     │
+                               │         (1 Credit = ₹1)         │
+                               └────────────────┬────────────────┘
+                                                │
+         ┌──────────────────────────────────────┼──────────────────────────────────────┐
+         ▼                                      ▼                                      ▼
+   AI VOICE CALLS                         WHATSAPP OUTREACH                       COLD EMAIL
+5 Credits / started min                 1 Credit / delivered msg               0.00 – 0.09 Credits
+(₹5.00/min Retell/Plivo)                (0.50 Credit / AI auto-reply)          (Free via Gmail/Zoho)
+```
+
+### 1. Two-Phase Reservation & Settlement Engine (`src/lib/wallet-model.ts`)
+To prevent race conditions, double-spending, and negative wallet balances across parallel campaigns, Leadpilot enforces a strict **Two-Phase Reservation Protocol**:
+
+1. **Phase 1: Pre-Flight Reservation (`reserve`)**:
+   * Before a campaign or call initiates, the system calculates estimated maximum cost:
+     $$\text{Estimated Cost} = \text{Eligible Contacts} \times \text{Channel Unit Rate}$$
+   * The system calls `reserve(wallet, campaignKey, estimatedCost)`.
+   * If `wallet.balance - wallet.reserved < estimatedCost`, the transaction halts immediately with an `insufficient_credits` exception.
+   * `wallet.reserved` increments by the required amount, locking those credits from any other process.
+
+2. **Phase 2: Actual Settlement (`settle`)**:
+   * As delivery receipts (Meta Webhooks) or Call Detail Records (Plivo CDR Webhooks) arrive:
+     * If the recipient was unreachable, invalid, or opted out: **0 credits** are consumed.
+     * If a call lasted 84 seconds (2 started minutes): **10 credits** are settled.
+   * The system calls `settle(wallet, campaignKey, actualCost)`.
+   * Formula:
+     $$\text{balance} \leftarrow \text{balance} - \text{actualCost}$$
+     $$\text{reserved} \leftarrow \text{reserved} - \text{estimatedCost}$$
+   * The unused reserved float is instantly released back to the customer's available balance.
+
+### 2. Channel-by-Channel Deduction Rules
+
+| Channel Action | Credit Rate | Billing Unit | Refund / Failure Policy |
+| :--- | :---: | :--- | :--- |
+| **AI Voice Call** | **5.0 Credits** (₹5.00) | Per started 60-second block of connected call time | 0 credits charged if Busy, No-Answer, Failed, or Dropped before pickup. |
+| **WhatsApp Marketing Message** | **1.0 Credit** (₹1.00) | Per successfully delivered HSM template message | Uncharged / refunded if number is invalid or Meta rejects delivery. |
+| **WhatsApp AI Bot Auto-Reply** | **0.5 Credit** (₹0.50) | Per 2-way AI response generated using Knowledge Base | Inbound user messages are 100% free; only the AI reply consumes 0.5 credit. |
+| **Cold Email (Connected Account)** | **0.0 Credits** (₹0.00) | Free (uses client's own Google Workspace / Zoho limits) | Zero credit deduction. |
+| **Cold Email (Platform Dedicated)**| **0.09 Credits** (₹0.09) | Per successfully handed-off email to AWS SES / SMTP | Bounced emails tracked; spam complaints suppress further sends. |
+
+### 3. Real-Time Transaction Ledger (`transactions` Table)
+Every credit movement is written to the immutable transaction ledger with an official reference:
+
+| Timestamp | Kind | Credits | Reference | Invoice / Receipt |
+| :--- | :--- | :---: | :--- | :--- |
+| `09 Nov 2026, 17:00` | `Plan credit renewal` | `+250` | Advance Plan Monthly Allotment | `SUB-2026-90412` |
+| `09 Nov 2026, 17:05` | `Top-up payment` | `+2,000` | Growth Pack · Razorpay Verified (18% GST) | `INV-2026-48190` |
+| `09 Nov 2026, 17:15` | `Campaign usage` | `-150` | COD Order Confirmation WhatsApp · 150 msgs | `RUN-8e4c0c-wa` |
+| `09 Nov 2026, 17:22` | `Call session usage` | `-10` | AI Voice Call (+91 8200010241) · 84s (2 mins) | `CDR-plivo-991` |
+
+### 4. Overdraft Prevention & Auto-Pause Guard
+* If a customer's available balance reaches `0 Credits` during a campaign sequence:
+  * The campaign status immediately switches to **`Paused (Credits Exhausted)`**.
+  * An automated notification banner appears in the topbar and sends an alert email to the workspace admin.
+  * No negative balances or surprise credit card overdrafts occur.
+  * The moment the customer recharges credits, the campaign resumes from the exact contact index where it paused.
+
+### 5. Plan Renewal Injection & Top-Up Packs
+* **Monthly Renewal**: Every 30 days, the subscription cron job injects base credits into the workspace:
+  * Basic Plan: `+100 Credits`
+  * Advance Plan: `+250 Credits`
+  * Pro Plan: `+500 Credits`
+* **Razorpay Top-Up Bonus Tiers**:
+  * ₹400 Top-Up $\rightarrow$ 400 Credits
+  * ₹2,000 Top-Up $\rightarrow$ 2,100 Credits *(+5% Bonus)*
+  * ₹7,800 Top-Up $\rightarrow$ 8,580 Credits *(+10% Bonus)*
+  * ₹30,800 Top-Up $\rightarrow$ 35,420 Credits *(+15% Enterprise Bonus)*
+
+---
+
+## 6. Complete REST API Catalog & Route Handlers
+
+Leadpilot provides a full REST API suite across 24 endpoints:
+
+### Billing & Wallet APIs
+1. **`POST /api/billing/order`**
+   * Creates a Razorpay Order for subscription or credit top-ups.
+   * Input: `{ "amountRupees": 2000, "packLabel": "Growth Top-Up", "gstin": "27ABCDE1234F1Z5" }`
+   * Output: `{ "orderId": "order_xyz", "amountPaise": 236000, "totalPaise": 236000, "invoiceNumber": "INV-2026-88192" }`
+2. **`GET /api/billing`**
+   * Returns current plan status, order history, credit rates, and downloadable GST invoices.
+3. **`POST /api/webhooks/razorpay`**
+   * Webhook listener verifying `X-Razorpay-Signature` HMAC SHA-256. Finalizes payments, records ledger credit, and unlocks active plan.
+
+### WhatsApp Cloud API Endpoints
+4. **`GET /api/webhooks/meta`**
+   * Meta Webhook verification handshake: verifies `hub.verify_token == process.env.META_WEBHOOK_VERIFY_TOKEN` and echoes `hub.challenge`.
+5. **`POST /api/webhooks/meta`**
+   * Inbound WhatsApp messages, delivery receipts (`sent`, `delivered`, `read`, `failed`), and interactive button responses.
+6. **`POST /api/channels/whatsapp`**
+   * Sends live chat message or HSM template: `{ "recipient": "+918200010241", "template": "order_confirmed", "variables": [...] }`
+7. **`POST /api/channels/whatsapp/blue-tick/submit`**
+   * Validates dossier documents, trade license, and press links; dispatches Meta Partner OBA verification request.
+
+### AI Calling & Telephony Endpoints
+8. **`POST /api/voice`**
+   * Initiates outbound AI call via Plivo SIP trunk: `{ "to": "+918200010241", "agentId": "agent_cod", "callerId": "+919876543210" }`
+9. **`GET /api/voice/[id]`**
+   * Polls live call state, streaming duration, and real-time transcript.
+10. **`POST /api/integrations/plivo`**
+    * Verifies customer Plivo credentials, caller ID ownership, and SIP binding.
+
+### Campaign & Sequence Execution Endpoints
+11. **`POST /api/campaigns/dispatch`**
+    * Triggers campaign run. Validates wallet balance, checks working hours schedule, dispatches batches, and deducts credits.
+12. **`GET /api/campaigns`** & **`POST /api/campaigns`**
+    * CRUD operations for campaign definitions, schedule triggers, and target segment associations.
+
+### Email & OAuth Integration Endpoints
+13. **`GET /api/integrations/[provider]/connect`**
+    * Generates OAuth 2.0 authorization URL for Google (Gmail) or Zoho Mail.
+14. **`GET /api/integrations/[provider]/callback`**
+    * Exchanges OAuth auth code for permanent refresh token; encrypts token using AWS KMS (`AES-256-GCM`).
+15. **`POST /api/integrations/test`**
+    * Runs live handshake ping: SMTP TLS handshake test or Meta access token validation.
+
+### Audience & Contact Management Endpoints
+16. **`GET /api/contacts`** & **`POST /api/contacts`**
+    * Bulk import with country code prepend, tag assignment, and search filters.
+17. **`GET /api/contacts/export`**
+    * Streams filtered contacts to CSV download.
+18. **`DELETE /api/contacts/[id]`**
+    * Deletes or anonymizes contact per DPDP/GDPR compliance.
+
+### AI Intelligence Endpoints
+19. **`POST /api/ai`**
+    * Invokes AWS Bedrock Claude 3.5 Haiku for copy generation, WhatsApp bot reasoning, or call summarization.
+
+---
+
+## 7. Core Application Functions & Algorithms (TypeScript Engine)
+
+### 1. Two-Phase Wallet Locking (`src/lib/wallet-model.ts`)
+```typescript
+export function reserve(w: WalletState, key: string, amount: bigint): void {
+  const old = w.requests.get(key);
+  if (old) {
+    if (old.amount !== amount) throw new Error("idempotency_conflict");
+    return;
+  }
+  if (amount <= 0n) throw new Error("invalid_amount");
+  if (w.balance - w.reserved < amount) throw new Error("insufficient_credits");
+  w.reserved += amount;
+  w.requests.set(key, { amount });
+}
+
+export function settle(w: WalletState, key: string, actual: bigint): void {
+  const r = w.requests.get(key);
+  if (!r) throw new Error("reservation_not_found");
+  if (r.settled !== undefined) {
+    if (r.settled !== actual) throw new Error("settlement_conflict");
+    return;
+  }
+  if (actual < 0n || actual > r.amount) throw new Error("invalid_settlement");
+  w.balance -= actual;
+  w.reserved -= r.amount;
+  r.settled = actual;
+}
+```
+
+### 2. Campaign Simulation & Pre-Flight Validation (`src/lib/local-workspace.ts`)
+```typescript
+export const simulationRates: Record<Channel, number> = {
+  WhatsApp: 1,
+  Email: 1,
+  "AI calling": 5,
+};
+
+export function simulateCampaign(s: LocalWorkspace, id: string): LocalWorkspace {
+  const c = s.campaigns.find((c) => c.id === id);
+  if (!c) throw new Error("Campaign not found");
+  const errors = validateCampaign(s, c);
+  if (errors.length) throw new Error(errors.join(" "));
+  const eligible = eligibleContacts(s, c);
+  const cost = eligible.length * simulationRates[c.channel];
+  if (balance(s) < cost) {
+    throw new Error("Not enough sample credits. Add sample credits in Credits & billing.");
+  }
+  // Dispatches batch and records ledger transaction with unique reference
+  // ...
+}
+```
+
+### 3. Inbound AI Bot Knowledge Base Reply (`src/lib/bedrock.ts`)
+```typescript
+export async function runWhatsAppAgentReply(
+  incomingMessage: string,
+  knowledgeBase: string
+): Promise<{ reply: string; confidence: number }> {
+  // Evaluates query against brand knowledge base using Claude 3.5 Haiku
+  // Formats response into WhatsApp conversational style (< 80 words)
+  // ...
+}
+```
+
+---
+
+## 8. Third-Party APIs & Environment Variables Master Directory
 
 | # | Provider / Service | Environment Variable | Where to Obtain | Purpose in Leadpilot | Raw Cost / Pricing |
 | :---: | :--- | :--- | :--- | :--- | :--- |
@@ -239,7 +384,7 @@ flowchart TD
 
 ---
 
-## 6. Database Schema & Data Models (PostgreSQL / Supabase)
+## 9. Database Schema & Data Models (PostgreSQL / Supabase)
 
 Leadpilot uses a multi-tenant PostgreSQL schema enforced via Supabase Row-Level Security (RLS). Every query is isolated by `workspace_id`:
 
@@ -256,21 +401,9 @@ erDiagram
     WORKSPACES ||--o{ LEADS : qualifies
 ```
 
-### Core Table Schemas:
-1. **`workspaces`**:
-   * `id` (UUID PK), `name` (TEXT), `owner_id` (UUID), `plan` (TEXT: `basic` | `advance` | `pro`), `billing_cycle` (TEXT: `monthly` | `annual`), `credits_balance` (NUMERIC DEFAULT 500), `created_at` (TIMESTAMPTZ).
-2. **`contacts`**:
-   * `id` (UUID PK), `workspace_id` (UUID FK), `first_name` (TEXT), `last_name` (TEXT), `phone` (TEXT), `email` (TEXT), `country_code` (TEXT DEFAULT '+91'), `tags` (TEXT[]), `consent` (BOOLEAN DEFAULT TRUE), `created_at` (TIMESTAMPTZ).
-3. **`campaigns`**:
-   * `id` (UUID PK), `workspace_id` (UUID FK), `name` (TEXT), `sequence_id` (UUID FK), `channel` (TEXT: `WhatsApp` | `Email` | `AI calling`), `status` (TEXT: `Draft` | `Scheduled` | `Active` | `Completed` | `Paused`), `stats` (JSONB).
-4. **`call_logs`**:
-   * `id` (UUID PK), `workspace_id` (UUID FK), `contact_id` (UUID FK), `provider_call_id` (TEXT), `duration_seconds` (INT), `cost_credits` (NUMERIC), `sentiment` (TEXT: `Positive` | `Neutral` | `Negative`), `transcript` (TEXT), `recording_url` (TEXT).
-5. **`transactions`**:
-   * `id` (UUID PK), `workspace_id` (UUID FK), `credits` (NUMERIC), `kind` (TEXT: `Top-up` | `Campaign usage` | `Call usage`), `reference` (TEXT), `invoice_number` (TEXT), `created_at` (TIMESTAMPTZ).
-
 ---
 
-## 7. Inbound E-Commerce & Lead Ads Webhook Integrations
+## 10. Inbound E-Commerce & Lead Ads Webhook Integrations
 
 ### 1. Shopify Webhooks
 * **Abandoned Cart**: Listens to `checkouts/create` and `checkouts/update`. If `completed_at` is null after 15 minutes, triggers an automatic WhatsApp recovery sequence with dynamic discount link.
@@ -286,7 +419,7 @@ erDiagram
 
 ---
 
-## 8. AI Content Creators & Prompt Engineering Engine
+## 11. AI Content Creators & Prompt Engineering Engine
 
 Leadpilot includes an integrated AI copy engine (`src/lib/bedrock.ts`) powered by Claude 3.5 Haiku:
 1. **WhatsApp HSM Template Creator**: Generates Meta-compliant marketing and utility messages with variable tags (`{{1}}`, `{{2}}`), ensuring zero spam triggers.
@@ -295,7 +428,7 @@ Leadpilot includes an integrated AI copy engine (`src/lib/bedrock.ts`) powered b
 
 ---
 
-## 9. Production Webhook Event Payloads & Schemas
+## 12. Production Webhook Event Payloads & Schemas
 
 ### Meta WhatsApp Inbound Webhook (`/api/webhooks/whatsapp`)
 ```json
@@ -336,7 +469,7 @@ Leadpilot includes an integrated AI copy engine (`src/lib/bedrock.ts`) powered b
 
 ---
 
-## 10. Unit Economics, Pricing & Margin Analysis
+## 13. Unit Economics, Pricing & Margin Analysis
 
 ```
 ┌─────────────────────────────────┬────────────────────┬────────────────────┬────────────────────┐
@@ -352,7 +485,7 @@ Leadpilot includes an integrated AI copy engine (`src/lib/bedrock.ts`) powered b
 
 ---
 
-## 11. Regulatory Compliance & Security Architecture
+## 14. Regulatory Compliance & Security Architecture
 
 1. **TRAI / Telecom Commercial Communications (TCCCPR)**:
    * Voice dialer strictly enforces workspace calling windows (default 09:30 AM to 07:00 PM IST).
@@ -366,7 +499,7 @@ Leadpilot includes an integrated AI copy engine (`src/lib/bedrock.ts`) powered b
 
 ---
 
-## 12. Step-by-Step Provider Setup Guides
+## 15. Step-by-Step Provider Setup Guides
 
 ### Guide 1: Meta WhatsApp Embedded App Setup
 1. Go to [developers.facebook.com](https://developers.facebook.com/) $\rightarrow$ Create App $\rightarrow$ Select Type: **Business**.
@@ -388,7 +521,7 @@ Leadpilot includes an integrated AI copy engine (`src/lib/bedrock.ts`) powered b
 
 ---
 
-## 13. Production Deployment & Launch Checklist
+## 16. Production Deployment & Launch Checklist
 
 * [x] **Frontend UI & Themes**: Royal Blue theme applied across all 13 modules (No orange, no legacy branding).
 * [x] **Unit & Regression Testing**: 104 / 104 passing tests (`npm test`).
