@@ -33,6 +33,7 @@ import {
   IndianRupee,
   CreditCard,
   Building2,
+  Bot,
 } from "lucide-react";
 import RapidSalesLogo from "./rapid-logo";
 import RapidMascot from "./rapid-mascot";
@@ -63,6 +64,7 @@ import WhatsAppBlueTick from "./whatsapp-blue-tick";
 import WhatsAppConfig from "./whatsapp-config";
 import MailConfig from "./mail-config";
 import Profile from "./profile";
+import AgentSwarm from "./agent-swarm";
 import OnboardingWizard from "./onboarding-wizard";
 import { Panel, Empty, Badge, date } from "./ui";
 import { groups, names } from "./navigation";
@@ -449,6 +451,8 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
     );
   else if (page === "email-setup" || page === "identities" || page === "senders")
     content = <MailConfig account={account} notify={notify} />;
+  else if (page === "agent-swarm")
+    content = <AgentSwarm notify={notify} navigate={navigate} />;
   else if (page === "edit-profile" || page === "profile")
     content = (
       <Profile
@@ -761,6 +765,33 @@ function WorkspaceConsole({ account }: { account?: AccountIdentity }) {
           >
             <LayoutDashboard size={18} className="rapid-dashboard-nav-icon" />
             {!sidebarCollapsed && <span>Dashboard</span>}
+          </button>
+          <button
+            type="button"
+            className={`console-nav-item ${page === "agent-swarm" ? "active" : ""}`}
+            aria-current={page === "agent-swarm" ? "page" : undefined}
+            onClick={() => navigate("agent-swarm")}
+            title="Agent Swarm"
+          >
+            <Bot size={18} />
+            {!sidebarCollapsed && (
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1 }}>
+                <span>Agent Swarm</span>
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 700,
+                    background: "rgba(56, 189, 248, 0.2)",
+                    color: "#38bdf8",
+                    padding: "1px 6px",
+                    borderRadius: 999,
+                    letterSpacing: "0.4px",
+                  }}
+                >
+                  AI
+                </span>
+              </span>
+            )}
           </button>
 
           {/* Section: AUDIENCE */}
