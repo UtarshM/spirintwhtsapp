@@ -79,6 +79,7 @@ const campaignSchema = z.object({
   contactIds: z.array(identifier),
   status: z.enum(["Draft", "Scheduled", "Paused", "Cancelled", "Completed"]),
   scheduledAt: z.string(),
+  delaySeconds: z.number().int().min(1).max(300).optional(),
   createdAt: timestamp,
   updatedAt: timestamp,
   runId: z.string().optional(),

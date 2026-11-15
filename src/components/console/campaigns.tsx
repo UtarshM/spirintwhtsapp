@@ -684,6 +684,8 @@ export default function Campaigns({
                 notify("Choose a future schedule time");
                 return;
               }
+              const rawDelay = Number(f.get("delaySeconds"));
+              const delaySeconds = !isNaN(rawDelay) && rawDelay > 0 ? rawDelay : 8;
               const c: LocalCampaign = {
                 id: edit?.id || uid(),
                 name: formValue(f, "name"),
@@ -695,6 +697,7 @@ export default function Campaigns({
                 contactIds: selected,
                 status: scheduled ? "Scheduled" : "Draft",
                 scheduledAt: scheduled ? new Date(scheduled).toISOString() : "",
+                delaySeconds,
                 createdAt: edit?.createdAt || now(),
                 updatedAt: now(),
               };
@@ -860,6 +863,22 @@ export default function Campaigns({
               ))}
             </div>
             <label>
+              Message pacing / anti-ban delay (seconds per message)
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "4px" }}>
+                <input
+                  name="delaySeconds"
+                  type="number"
+                  min={1}
+                  max={120}
+                  defaultValue={edit?.delaySeconds || 8}
+                  style={{ width: "90px" }}
+                />
+                <span style={{ fontSize: "12px", color: "#64748b" }}>
+                  Default is 8s. Customize between 5–10s to safeguard WhatsApp health.
+                </span>
+              </div>
+            </label>
+            <label>
               Optional schedule (your browser timezone)
               <input
                 name="scheduledAt"
@@ -915,6 +934,9 @@ export default function Campaigns({
             stop-on-reply suppression. No delivery is reported by a simulation.
           </p>
           <p>Scheduled: {date(current.scheduledAt)}</p>
+          <p style={{ fontSize: "13px", color: "#475569" }}>
+            <strong>Pacing:</strong> {current.delaySeconds || 8}s delay per message (Anti-spam rate limit)
+          </p>
           {validateCampaign(s, current).map((err) => (
             <div className="console-notice" key={err}>
               {err}
