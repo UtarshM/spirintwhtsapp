@@ -51,7 +51,7 @@ export default function WhatsAppBlueTick({
   );
   const data = (blueTickResource?.data || {}) as Record<string, string>;
 
-  const [activeTab, setActiveTab] = useState<"readiness" | "application" | "guidelines">("readiness");
+  const [activeTab, setActiveTab] = useState<"readiness" | "application" | "meta-verified" | "guidelines">("readiness");
   const [isApplying, setIsApplying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -446,6 +446,7 @@ export default function WhatsAppBlueTick({
       <div style={{ display: "flex", gap: 6, borderBottom: "1px solid #e2e8f0", marginBottom: 20 }}>
         {[
           { id: "readiness", label: "Meta Readiness Audit" },
+          { id: "meta-verified", label: "Meta Verified (Direct ₹639/mo)" },
           { id: "application", label: "Application Details & Dossier" },
           { id: "guidelines", label: "Official Meta OBA Guidelines" },
         ].map((tab) => (
@@ -584,6 +585,87 @@ export default function WhatsAppBlueTick({
             >
               Continue to Application Dossier →
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Meta Verified Direct Subscription */}
+      {activeTab === "meta-verified" && (
+        <div style={{ lineHeight: 1.6, color: "#334155" }}>
+          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: 18, marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+              <div>
+                <strong style={{ color: "#166534", fontSize: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Sparkles size={18} color="#059669" />
+                  Meta Verified for Business (Direct Purchase · No PR Needed)
+                </strong>
+                <p style={{ fontSize: 13, color: "#15803d", margin: "6px 0 0" }}>
+                  Just like on Instagram and Facebook, any business can now directly buy the official verified badge for WhatsApp from Meta for ₹639/month. No press releases, news articles, or media audits required.
+                </p>
+              </div>
+              <a
+                href="https://business.facebook.com/latest/meta_verified"
+                target="_blank"
+                rel="noreferrer"
+                className="primary"
+                style={{
+                  padding: "8px 18px",
+                  fontSize: 13,
+                  background: "#059669",
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span>Subscribe on Meta</span>
+                <ExternalLink size={14} />
+              </a>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 18 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#059669", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Option 1 · Direct Subscription
+              </span>
+              <h3 style={{ fontSize: 18, margin: "6px 0 2px", color: "#0f172a" }}>Meta Verified</h3>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#059669", marginBottom: 12 }}>
+                ₹639 <span style={{ fontSize: 13, fontWeight: 500, color: "#64748b" }}>/ month per business</span>
+              </div>
+              <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, display: "flex", flexDirection: "column", gap: 8, color: "#475569" }}>
+                <li><strong>No PR or news articles required:</strong> 100% guaranteed approval.</li>
+                <li><strong>Verified Badge:</strong> Blue checkmark on WhatsApp, Instagram, and Facebook.</li>
+                <li><strong>Fast KYC:</strong> Approved within 24–48 hours using GST / Business PAN.</li>
+                <li><strong>Proactive Protection:</strong> Continuous impersonation monitoring by Meta.</li>
+              </ul>
+            </div>
+
+            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 18 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Option 2 · Notable Brands Only
+              </span>
+              <h3 style={{ fontSize: 18, margin: "6px 0 2px", color: "#0f172a" }}>Official Business Account (OBA)</h3>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>
+                ₹0 <span style={{ fontSize: 13, fontWeight: 500, color: "#64748b" }}>/ free from Meta</span>
+              </div>
+              <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, display: "flex", flexDirection: "column", gap: 8, color: "#475569" }}>
+                <li><strong>Requires Public Notability:</strong> Must have 3–5 organic national news articles.</li>
+                <li><strong>High Volume Tier:</strong> Must reach Tier 2+ messaging limits.</li>
+                <li><strong>Green Checkmark:</strong> Shows verified green badge next to display name.</li>
+                <li><strong>Audit Process:</strong> 2–4 business days manual review by Meta Policy Team.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 16 }}>
+            <h4 style={{ margin: "0 0 10px", fontSize: 14, color: "#1e293b" }}>3-Step Fast Setup for Meta Verified (₹639/mo):</h4>
+            <ol style={{ paddingLeft: 20, margin: 0, fontSize: 13, display: "flex", flexDirection: "column", gap: 6, color: "#475569" }}>
+              <li>Open <strong>Meta Business Suite</strong> $\rightarrow$ Select your business portfolio.</li>
+              <li>Under <strong>Meta Verified for Business</strong>, click <strong>Subscribe</strong>.</li>
+              <li>Upload your <strong>GST Certificate / Business PAN</strong> and verify the owner's Aadhaar or Passport. Verification activates in 24 hours!</li>
+            </ol>
           </div>
         </div>
       )}
