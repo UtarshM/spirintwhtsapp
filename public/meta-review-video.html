@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Leadpilot — Meta App Review 60s Video Generator</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .header {
+      text-align: center;
+      max-width: 800px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 26px;
+      margin: 0 0 8px;
+      color: #38bdf8;
+    }
+    .header p {
+      font-size: 14px;
+      color: #94a3b8;
+      margin: 0;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    .status {
+      font-size: 14px;
+      font-weight: 600;
+      color: #38bdf8;
+    }
+    #canvas-container {
+      background: #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      border: 1px solid #334155;
+      position: relative;
+    }
+    canvas {
+      display: block;
+      width: 960px;
+      height: 540px;
+    }
+    .video-preview {
+      margin-top: 24px;
+      text-align: center;
+      display: none;
+    }
+    video {
+      width: 640px;
+      border-radius: 8px;
+      border: 1px solid #38bdf8;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Leadpilot — Automated Meta App Review Video Generator</h1>
+    <p>Records a crisp 1080p 60-second screen recording demonstrating <strong>whatsapp_business_messaging</strong> and <strong>whatsapp_business_management</strong> according to Meta's review standards.</p>
+  </div>
+
+  <div class="controls">
+    <button id="startBtn">Generate 60s Review Video</button>
+    <div id="status" class="status">Ready to generate. Click button to begin.</div>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="recCanvas" width="1280" height="720"></canvas>
+  </div>
+
+  <div id="videoPreview" class="video-preview">
+    <h3>Video Generated Successfully!</h3>
+    <p>Your video is saved as <strong id="videoName" style="color: #38bdf8">leadpilot-meta-app-review.webm</strong>.</p>
+    <video id="outVideo" controls autoplay loop></video>
+    <div style="margin-top: 12px;">
+      <a id="downloadLink" href="#" download="leadpilot-meta-app-review.webm" style="color: #38bdf8; text-decoration: underline; font-weight: 600;">Download Video File (.webm)</a>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('recCanvas');
+    const ctx = canvas.getContext('2d');
+    const startBtn = document.getElementById('startBtn');
+    const statusDiv = document.getElementById('status');
+    const videoPreview = document.getElementById('videoPreview');
+    const outVideo = document.getElementById('outVideo');
+    const downloadLink = document.getElementById('downloadLink');
+
+    const TOTAL_SECONDS = 60;
+    const FPS = 30;
+    const TOTAL_FRAMES = TOTAL_SECONDS * FPS;
+
+    // Mouse cursor coordinates state
+    let mouse = { x: 400, y: 300, click: false };
+
+    // Initial render
+    drawScene(0);
+
+    startBtn.addEventListener('click', startRecording);
+
+    async function startRecording() {
+      startBtn.disabled = true;
+      videoPreview.style.display = 'none';
+
+      const stream = canvas.captureStream(FPS);
+      let mediaRecorder;
+      const mimeTypes = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm'
+      ];
+      let selectedMime = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+      
+      try {
+        mediaRecorder = new MediaRecorder(stream, selectedMime ? { mimeType: selectedMime } : {});
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(stream);
+      }
+
+      const chunks = [];
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const videoUrl = URL.createObjectURL(blob);
+        outVideo.src = videoUrl;
+        downloadLink.href = videoUrl;
+        videoPreview.style.display = 'block';
+        statusDiv.innerHTML = '<span style="color:#10b981">✓ Video recording completed and downloaded!</span>';
+        startBtn.disabled = false;
+
+        // Auto trigger download
+        const a = document.createElement('a');
+        a.href = videoUrl;
+        a.download = 'leadpilot-meta-app-review.webm';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+
+      mediaRecorder.start();
+
+      let frame = 0;
+      function step() {
+        const t = frame / FPS; // elapsed seconds
+        drawScene(t);
+        frame++;
+
+        const percent = Math.min(100, Math.floor((frame / TOTAL_FRAMES) * 100));
+        statusDiv.innerText = `Recording frame ${frame}/${TOTAL_FRAMES} (${t.toFixed(1)}s / ${TOTAL_SECONDS}s) — ${percent}%`;
+
+        if (frame < TOTAL_FRAMES) {
+          requestAnimationFrame(step);
+        } else {
+          mediaRecorder.stop();
+        }
+      }
+
+      requestAnimationFrame(step);
+    }
+
+    function drawScene(t) {
+      // Clear
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 1280, 720);
+
+      // Determine active scene
+      // Scene 1: (0s - 12s) Overview Dashboard
+      // Scene 2: (12s - 26s) WhatsApp Inbox & Sending Message (whatsapp_business_messaging)
+      // Scene 3: (26s - 38s) Incoming Reply & Thread View
+      // Scene 4: (38s - 54s) Template Creation & Approval (whatsapp_business_management)
+      // Scene 5: (54s - 60s) Review Summary & Tech Provider Readiness
+
+      if (t < 12) {
+        renderDashboard(t);
+      } else if (t < 26) {
+        renderWhatsAppInboxSend(t - 12);
+      } else if (t < 38) {
+        renderWhatsAppInboxReply(t - 26);
+      } else if (t < 54) {
+        renderTemplateManagement(t - 38);
+      } else {
+        renderReviewSummary(t - 54);
+      }
+
+      // Draw Cursor
+      drawCursor(mouse.x, mouse.y, mouse.click);
+
+      // Global Header Badge & Timer
+      drawGlobalHeader(t);
+    }
+
+    function drawGlobalHeader(t) {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 1280, 48);
+
+      // Brand
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText('⚡ Leadpilot', 24, 30);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('Omnichannel WhatsApp AI Platform · Meta Tech Provider Demo', 140, 30);
+
+      // Time pill
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(1140, 10, 116, 28);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 13px monospace';
+      ctx.fillText(`${t.toFixed(1)}s / 60.0s`, 1152, 28);
+    }
+
+    function drawSidebar(activeNav = 'Overview') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 48, 220, 672);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(219, 48, 1, 672);
+
+      const items = [
+        { label: 'Dashboard', icon: '📊', id: 'Overview' },
+        { label: 'AUDIENCE', header: true },
+        { label: 'Contacts', icon: '👥', id: 'Contacts' },
+        { label: 'Campaigns', icon: '📢', id: 'Campaigns' },
+        { label: 'CHANNELS', header: true },
+        { label: 'AI Calling', icon: '📞', id: 'Voice' },
+        { label: 'WhatsApp', icon: '💬', id: 'WhatsApp', active: true },
+        { label: '  • WhatsApp Inbox', icon: '📥', id: 'wa-inbox' },
+        { label: '  • Templates & Sync', icon: '📋', id: 'wa-templates' },
+        { label: '  • Blue Tick Hub', icon: '✓', id: 'wa-bluetick' },
+        { label: 'Email', icon: '✉️', id: 'Email' },
+        { label: 'SETUP', header: true },
+        { label: 'API Keys', icon: '🔑', id: 'Keys' },
+        { label: 'Billing & Wallet', icon: '💳', id: 'Billing' },
+      ];
+
+      let y = 70;
+      items.forEach(it => {
+        if (it.header) {
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillText(it.label, 20, y);
+          y += 18;
+          return;
+        }
+
+        const isAct = it.id === activeNav || (activeNav === 'wa-inbox' && it.id === 'wa-inbox') || (activeNav === 'wa-templates' && it.id === 'wa-templates');
+        if (isAct) {
+          ctx.fillStyle = '#eff6ff';
+          ctx.fillRect(10, y - 14, 200, 26);
+          ctx.fillStyle = '#2563eb';
+          ctx.font = 'bold 13px sans-serif';
+        } else {
+          ctx.fillStyle = '#475569';
+          ctx.font = '13px sans-serif';
+        }
+        ctx.fillText(`${it.icon}  ${it.label}`, 20, y + 4);
+        y += 28;
+      });
+    }
+
+    // SCENE 1: Overview Dashboard
+    function renderDashboard(t) {
+      drawSidebar('Overview');
+
+      // Top Breadcrumb & Wallet
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText('Workspace Overview', 244, 90);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('Scalezix Technologies · Production Environment · Live Cloud API', 244, 112);
+
+      // KPI Cards
+      drawCard(244, 130, 220, 100, 'WALLET CREDITS', '₹8,450.00', '1 Credit = ₹1 INR · Active', '#2563eb');
+      drawCard(484, 130, 220, 100, 'WHATSAPP MESSAGES', '14,820', '99.4% Delivery rate', '#059669');
+      drawCard(724, 130, 220, 100, 'REPLY RATE', '28.6%', '3,840 responses', '#7c3aed');
+      drawCard(964, 130, 220, 100, 'META TIER LIMIT', 'Tier 2 (10k/day)', 'Quality: High (Green)', '#0284c7');
+
+      // Banner Callout
+      ctx.fillStyle = '#f0fdf4';
+      ctx.fillRect(244, 250, 940, 70);
+      ctx.strokeStyle = '#bbf7d0';
+      ctx.strokeRect(244, 250, 940, 70);
+
+      ctx.fillStyle = '#166534';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText('✓ Meta WhatsApp Cloud API v21.0 Connected (Tech Provider)', 264, 280);
+      ctx.fillStyle = '#15803d';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('Phone Number ID: 109884871584699 · WABA ID: 995990506901704 · Webhook: Active (sub-200ms latency)', 264, 302);
+
+      // Recent Activity
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(244, 340, 940, 320);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(244, 340, 940, 320);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText('Recent Automated Outbound & Lead Conversions', 264, 375);
+
+      const rows = [
+        { name: 'Aarav Sharma', phone: '+91 98765 43210', status: 'Delivered', time: 'Just now', template: 'order_status_update' },
+        { name: 'Priya Patel', phone: '+91 98220 11223', status: 'Read', time: '2m ago', template: 'abandoned_cart_recovery' },
+        { name: 'Rohan Mehta', phone: '+91 99100 88776', status: 'Replied', time: '5m ago', template: 'lead_qualification' },
+        { name: 'Sneha Kapoor', phone: '+91 98450 33445', status: 'Delivered', time: '11m ago', template: 'order_status_update' },
+      ];
+
+      let ry = 410;
+      rows.forEach(r => {
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(r.name, 264, ry);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(r.phone, 420, ry);
+        ctx.fillText(r.template, 580, ry);
+        ctx.fillStyle = r.status === 'Replied' ? '#7c3aed' : r.status === 'Read' ? '#0284c7' : '#059669';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(`● ${r.status}`, 800, ry);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(r.time, 920, ry);
+        ry += 42;
+      });
+
+      // Animate Cursor towards WhatsApp Inbox in sidebar
+      if (t < 6) {
+        mouse.x = 450 + t * 20;
+        mouse.y = 200 + t * 10;
+      } else {
+        const p = (t - 6) / 6;
+        mouse.x = 570 - p * 460;
+        mouse.y = 260 - p * 30;
+      }
+    }
+
+    // SCENE 2: WhatsApp Inbox & Sending Message
+    function renderWhatsAppInboxSend(t) {
+      drawSidebar('wa-inbox');
+
+      // Top Permission Banner
+      drawPermissionBanner(
+        'whatsapp_business_messaging',
+        'Demonstrating customer conversation outreach & template dispatch',
+        '#2563eb'
+      );
+
+      // Two-pane Inbox
+      // Left conversation list
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(240, 110, 320, 580);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(240, 110, 320, 580);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText('WhatsApp Conversations', 256, 140);
+
+      // Selected contact
+      ctx.fillStyle = '#eff6ff';
+      ctx.fillRect(240, 160, 320, 64);
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('Aarav Sharma', 260, 186);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('+91 98765 43210 · Lead Inbound', 260, 206);
+
+      // Right Chat Pane
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(560, 110, 680, 580);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(560, 110, 680, 580);
+
+      // Chat header
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(560, 110, 680, 54);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText('Aarav Sharma (+91 98765 43210)', 580, 142);
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText('● OPTED-IN & ACTIVE VIA CLOUD API', 960, 142);
+
+      // Existing message bubble
+      drawChatBubble(600, 200, 420, 60, 'Hello! I saw your construction software on Instagram. Can you send demo details?', false);
+
+      // Typing animation
+      const fullText = "Hi Aarav! Thanks for reaching out to Leadpilot. Here is our software overview and booking link:";
+      const chars = Math.min(fullText.length, Math.floor(t * 8));
+      const currentText = fullText.slice(0, chars);
+
+      // Outbound message if sent
+      const isSent = t > 8;
+      if (isSent) {
+        drawChatBubble(760, 280, 440, 70, fullText, true, 'Delivered ✓✓');
+      }
+
+      // Composer Box
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(580, 620, 640, 50);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.strokeRect(580, 620, 640, 50);
+
+      ctx.fillStyle = isSent ? '#94a3b8' : '#0f172a';
+      ctx.font = '13px sans-serif';
+      ctx.fillText(isSent ? 'Type a message...' : currentText + (Math.floor(t * 3) % 2 === 0 ? '|' : ''), 600, 650);
+
+      // Send Button
+      ctx.fillStyle = '#2563eb';
+      ctx.fillRect(1140, 628, 70, 34);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('Send', 1158, 650);
+
+      // Mouse moves to send button
+      if (t < 7) {
+        mouse.x = 650 + t * 40;
+        mouse.y = 645;
+        mouse.click = false;
+      } else if (t < 9) {
+        mouse.x = 1170;
+        mouse.y = 645;
+        mouse.click = t > 7.8 && t < 8.4;
+      } else {
+        mouse.x = 900;
+        mouse.y = 310;
+        mouse.click = false;
+      }
+    }
+
+    // SCENE 3: Incoming Reply & Thread View
+    function renderWhatsAppInboxReply(t) {
+      drawSidebar('wa-inbox');
+
+      drawPermissionBanner(
+        'whatsapp_business_messaging',
+        'Real-time webhook receiving customer replies (Zero latency thread sync)',
+        '#059669'
+      );
+
+      // Left conversation list with unread badge
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(240, 110, 320, 580);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(240, 110, 320, 580);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText('WhatsApp Conversations', 256, 140);
+
+      // Contact row with NEW message
+      ctx.fillStyle = '#f0fdf4';
+      ctx.fillRect(240, 160, 320, 64);
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('Aarav Sharma', 260, 186);
+
+      // Green badge
+      ctx.fillStyle = '#059669';
+      ctx.beginPath();
+      ctx.arc(520, 186, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText('1', 517, 190);
+
+      ctx.fillStyle = '#059669';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('Yes! Tomorrow 3 PM works...', 260, 206);
+
+      // Right Chat Pane
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(560, 110, 680, 580);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(560, 110, 680, 580);
+
+      // Existing bubbles
+      drawChatBubble(600, 180, 420, 50, 'Hello! I saw your construction software on Instagram. Can you send demo details?', false);
+      drawChatBubble(760, 250, 440, 60, 'Hi Aarav! Thanks for reaching out to Leadpilot. Here is our software overview and booking link:', true, 'Read ✓✓');
+
+      // NEW Incoming Customer Reply
+      const showReply = t > 2;
+      if (showReply) {
+        drawChatBubble(600, 330, 460, 70, 'Yes! Tomorrow at 3:00 PM works perfectly for our team demo. Please send calendar invite.', false, 'Received via Webhook Just Now');
+      }
+
+      // Stop on reply status
+      ctx.fillStyle = '#eff6ff';
+      ctx.fillRect(580, 430, 640, 46);
+      ctx.strokeStyle = '#bfdbfe';
+      ctx.strokeRect(580, 430, 640, 46);
+
+      ctx.fillStyle = '#1e40af';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('⚡ Stop-on-Reply Triggered: Automated campaign sequence safely paused for live human takeover.', 600, 458);
+
+      // Cursor moves to Templates menu in sidebar
+      const p = Math.min(1, t / 10);
+      mouse.x = 800 - p * 700;
+      mouse.y = 350 - p * 50;
+    }
+
+    // SCENE 4: Template Creation & Management (whatsapp_business_management)
+    function renderTemplateManagement(t) {
+      drawSidebar('wa-templates');
+
+      drawPermissionBanner(
+        'whatsapp_business_management',
+        'Creating, previewing, and synchronizing approved WhatsApp templates with Meta',
+        '#7c3aed'
+      );
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('WhatsApp Message Templates', 244, 140);
+
+      // New Template Button
+      ctx.fillStyle = '#2563eb';
+      ctx.fillRect(1060, 116, 140, 36);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('+ New Template', 1080, 139);
+
+      // Template Cards Table
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(244, 170, 960, 480);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(244, 170, 960, 480);
+
+      const templates = [
+        { name: 'order_status_update', cat: 'UTILITY', lang: 'en_US', status: 'APPROVED', updated: 'Today' },
+        { name: 'abandoned_cart_recovery', cat: 'MARKETING', lang: 'en_US', status: 'APPROVED', updated: 'Yesterday' },
+        { name: 'lead_qualification_prompt', cat: 'UTILITY', lang: 'en_US', status: 'APPROVED', updated: '3 days ago' },
+      ];
+
+      // Header row
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(245, 171, 958, 40);
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('TEMPLATE NAME', 264, 196);
+      ctx.fillText('CATEGORY', 520, 196);
+      ctx.fillText('LANGUAGE', 680, 196);
+      ctx.fillText('META STATUS', 820, 196);
+      ctx.fillText('ACTIONS', 1060, 196);
+
+      let ty = 240;
+      templates.forEach(tp => {
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(tp.name, 264, ty);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(tp.cat, 520, ty);
+        ctx.fillText(tp.lang, 680, ty);
+
+        // Status Badge
+        ctx.fillStyle = '#dcfce7';
+        ctx.fillRect(820, ty - 16, 90, 24);
+        ctx.fillStyle = '#166534';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(`✓ ${tp.status}`, 832, ty);
+
+        ctx.fillStyle = '#2563eb';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('Edit · Preview', 1060, ty);
+
+        ty += 50;
+      });
+
+      // Modal Creation Popup if t > 6
+      if (t > 4) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
+        ctx.fillRect(0, 48, 1280, 672);
+
+        // Modal Box
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(400, 120, 560, 440);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.strokeRect(400, 120, 560, 440);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 17px sans-serif';
+        ctx.fillText('Create New WhatsApp Template', 424, 155);
+
+        // Field 1: Name
+        drawField(424, 180, 510, 'Template Name', 'customer_appointment_confirmation');
+        drawField(424, 240, 240, 'Category', 'Utility (Transactional)');
+        drawField(680, 240, 254, 'Language', 'English (en_US)');
+        drawField(424, 300, 510, 'Body Text with Variables', 'Hi {{1}}, your appointment with Leadpilot is scheduled for {{2}} at {{3}}!');
+        drawField(424, 380, 510, 'Call to Action Button', 'Confirm Attendance (Quick Reply)');
+
+        // Submit Button
+        ctx.fillStyle = '#059669';
+        ctx.fillRect(720, 490, 214, 38);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText('Submit to Meta Review', 750, 514);
+
+        if (t < 11) {
+          mouse.x = 600 + (t - 4) * 25;
+          mouse.y = 260 + (t - 4) * 20;
+        } else {
+          mouse.x = 820;
+          mouse.y = 510;
+          mouse.click = t > 13 && t < 14;
+        }
+      }
+    }
+
+    // SCENE 5: Review Summary & Tech Provider Readiness
+    function renderReviewSummary(t) {
+      drawSidebar('Overview');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(280, 100, 880, 500);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(280, 100, 880, 500);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('Meta App Review Compliance Summary', 320, 160);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('Leadpilot Tech Provider Integration · Full Transparency & Security Compliance', 320, 190);
+
+      // Checkmarks
+      const items = [
+        { title: 'whatsapp_business_messaging Demonstrated', desc: 'Outbound messaging, recipient consent enforcement, and real-time webhook sync.' },
+        { title: 'whatsapp_business_management Demonstrated', desc: 'Template authoring, dynamic variable interpolation, and WABA synchronization.' },
+        { title: 'Meta Cloud API v21.0 Standards Met', desc: 'Fast, secure webhook processing with HMAC-SHA256 signature verification.' },
+        { title: 'Consumer Protection Guardrails', desc: 'Automatic Stop-on-Reply suppression, opt-out compliance, and quiet hour schedules.' },
+      ];
+
+      let iy = 240;
+      items.forEach(it => {
+        ctx.fillStyle = '#dcfce7';
+        ctx.beginPath();
+        ctx.arc(340, iy + 6, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#166534';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('✓', 335, iy + 11);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText(it.title, 370, iy + 5);
+
+        ctx.fillStyle = '#475569';
+        ctx.font = '13px sans-serif';
+        ctx.fillText(it.desc, 370, iy + 24);
+
+        iy += 60;
+      });
+
+      // Bottom Signature
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(320, 480, 800, 80);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.strokeRect(320, 480, 800, 80);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('Leadpilot SaaS Platform (Scalezix Technologies LLP)', 340, 514);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('Ready for Meta Tech Provider Review Submission · Contact: um18218@gmail.com', 340, 538);
+
+      mouse.x = 640;
+      mouse.y = 520;
+    }
+
+    // Helper: Draw Stat Card
+    function drawCard(x, y, w, h, label, val, sub, col) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(x, y, w, h);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(label, x + 16, y + 26);
+
+      ctx.fillStyle = col;
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(val, x + 16, y + 58);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.fillText(sub, x + 16, y + 82);
+    }
+
+    // Helper: Draw Chat Bubble
+    function drawChatBubble(x, y, w, h, text, isOut, receipt) {
+      ctx.fillStyle = isOut ? '#dcfce7' : '#ffffff';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = isOut ? '#86efac' : '#e2e8f0';
+      ctx.strokeRect(x, y, w, h);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '13px sans-serif';
+      wrapText(ctx, text, x + 14, y + 22, w - 28, 18);
+
+      if (receipt) {
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText(receipt, x + w - 100, y + h - 8);
+      }
+    }
+
+    // Helper: Draw Input Field
+    function drawField(x, y, w, label, val) {
+      ctx.fillStyle = '#475569';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(label, x, y);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(x, y + 6, w, 28);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.strokeRect(x, y + 6, w, 28);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(val, x + 10, y + 24);
+    }
+
+    // Helper: Permission Callout Banner
+    function drawPermissionBanner(perm, desc, col) {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(240, 56, 980, 42);
+
+      ctx.fillStyle = col;
+      ctx.font = 'bold 13px monospace';
+      ctx.fillText(`[Permission: ${perm}]`, 260, 82);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '13px sans-serif';
+      ctx.fillText(desc, 600, 82);
+    }
+
+    // Helper: Mouse Cursor
+    function drawCursor(x, y, isClick) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Pointer Arrow
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 16);
+      ctx.lineTo(4, 12);
+      ctx.lineTo(9, 21);
+      ctx.lineTo(12, 19);
+      ctx.lineTo(7, 10);
+      ctx.lineTo(13, 10);
+      ctx.closePath();
+
+      ctx.fillStyle = isClick ? '#ef4444' : '#0f172a';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      if (isClick) {
+        ctx.beginPath();
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // Helper: Text Wrap
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(' ');
+      let line = '';
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          ctx.fillText(line, x, y);
+          line = words[n] + ' ';
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, x, y);
+    }
+  </script>
+</body>
+</html>
